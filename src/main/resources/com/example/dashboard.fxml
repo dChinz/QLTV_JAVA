@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.controller.DashboardController"
+            fitToWidth="true" fitToHeight="true"
+            styleClass="content-area">
+
+    <VBox spacing="24" style="-fx-padding: 8 0 0 0;">
+
+        <!-- Stat Cards Row -->
+        <HBox spacing="16">
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" alignment="TOP_LEFT" spacing="8">
+                <Label fx:id="totalBooksLabel" text="0" styleClass="stat-card-value"/>
+                <Label text="Tổng số sách" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" alignment="TOP_LEFT" spacing="8">
+                <Label fx:id="totalMembersLabel" text="0" styleClass="stat-card-value"/>
+                <Label text="Đọc giả đang hoạt động" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" alignment="TOP_LEFT" spacing="8">
+                <Label fx:id="activeBorrowsLabel" text="0" styleClass="stat-card-value"/>
+                <Label text="Đang được mượn" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" alignment="TOP_LEFT" spacing="8">
+                <Label fx:id="overdueLabel" text="0" styleClass="stat-card-value" style="-fx-text-fill: #DC2626;"/>
+                <Label text="Quá hạn trả" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" alignment="TOP_LEFT" spacing="8">
+                <Label fx:id="unpaidFinesLabel" text="0đ" styleClass="stat-card-value" style="-fx-text-fill: #D97706;"/>
+                <Label text="Phí phạt chưa thu" styleClass="stat-card-label"/>
+            </VBox>
+        </HBox>
+
+        <!-- Two Column: Top Books + Top Members -->
+        <HBox spacing="16">
+
+            <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="12">
+                <Label text="Top sách mượn nhiều nhất" styleClass="section-header"/>
+                <Separator/>
+                <TableView fx:id="topBooksTable" prefHeight="280" maxHeight="280">
+                    <columns>
+                        <TableColumn fx:id="colBookRank"  text="#"      prefWidth="40"/>
+                        <TableColumn fx:id="colBookTitle" text="Tên sách" prefWidth="220"/>
+                        <TableColumn fx:id="colBookAuthor" text="Tác giả" prefWidth="140"/>
+                        <TableColumn fx:id="colBookCount" text="Lượt mượn" prefWidth="80"/>
+                    </columns>
+                    <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
+                </TableView>
+            </VBox>
+
+            <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="12">
+                <Label text="Đọc giả tích cực nhất" styleClass="section-header"/>
+                <Separator/>
+                <TableView fx:id="topMembersTable" prefHeight="280" maxHeight="280">
+                    <columns>
+                        <TableColumn fx:id="colMemberRank"  text="#"       prefWidth="40"/>
+                        <TableColumn fx:id="colMemberCode"  text="Mã TV"   prefWidth="80"/>
+                        <TableColumn fx:id="colMemberName"  text="Họ tên"  prefWidth="180"/>
+                        <TableColumn fx:id="colMemberCount" text="Lượt mượn" prefWidth="80"/>
+                    </columns>
+                    <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
+                </TableView>
+            </VBox>
+
+        </HBox>
+
+        <!-- Overdue Records -->
+        <VBox styleClass="card" spacing="12">
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <Label text="Sách quá hạn trả" styleClass="section-header" HBox.hgrow="ALWAYS"/>
+                <Button text="Làm mới" styleClass="btn-outline" onAction="#refresh"/>
+            </HBox>
+            <Separator/>
+            <TableView fx:id="overdueTable" prefHeight="200" maxHeight="200">
+                <columns>
+                    <TableColumn fx:id="colOvMember"  text="Đọc giả"    prefWidth="160"/>
+                    <TableColumn fx:id="colOvBook"    text="Sách"        prefWidth="200"/>
+                    <TableColumn fx:id="colOvDueDate" text="Hạn trả"     prefWidth="100"/>
+                    <TableColumn fx:id="colOvDays"    text="Số ngày TH"  prefWidth="100"/>
+                </columns>
+                <placeholder><Label text="Không có sách quá hạn"/></placeholder>
+            </TableView>
+        </VBox>
+
+    </VBox>
+</ScrollPane>

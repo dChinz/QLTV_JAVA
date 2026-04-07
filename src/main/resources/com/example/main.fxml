@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.controller.MainController"
+            stylesheets="@styles/main.css">
+
+    <left>
+        <VBox styleClass="sidebar" spacing="0">
+
+            <VBox styleClass="sidebar-header" spacing="4">
+                <Label styleClass="sidebar-app-title" text="Thư viện"/>
+                <Label styleClass="sidebar-app-subtitle" text="Hệ thống quản lý"/>
+            </VBox>
+
+            <Region minHeight="8"/>
+
+            <Label styleClass="sidebar-section-label" text="MENU CHÍNH"/>
+
+            <Button fx:id="btnDashboard"  text="Tổng quan"       styleClass="nav-button,active" onAction="#navigate" userData="dashboard"/>
+            <Button fx:id="btnBooks"      text="Quản lý sách"     styleClass="nav-button"        onAction="#navigate" userData="book"/>
+            <Button fx:id="btnCategories" text="Danh mục sách"   styleClass="nav-button"        onAction="#navigate" userData="category"/>
+
+            <Region minHeight="8"/>
+            <Label styleClass="sidebar-section-label" text="HOẠT ĐỘNG"/>
+
+            <Button fx:id="btnMembers"    text="Đọc giả"          styleClass="nav-button"        onAction="#navigate" userData="member"/>
+            <Button fx:id="btnBorrow"     text="Mượn / trả sách"  styleClass="nav-button"        onAction="#navigate" userData="borrow"/>
+            <Button fx:id="btnFines"      text="Phí phạt"         styleClass="nav-button"        onAction="#navigate" userData="fine"/>
+
+            <Region minHeight="8"/>
+            <Label styleClass="sidebar-section-label" text="THỐNG KÊ"/>
+
+            <Button fx:id="btnReports"    text="Báo cáo"          styleClass="nav-button"        onAction="#navigate" userData="report"/>
+
+            <Region VBox.vgrow="ALWAYS"/>
+
+            <Separator/>
+            <VBox style="-fx-padding: 12;" spacing="4">
+                <Label fx:id="userLabel" styleClass="user-info-label" text=""/>
+                <Button text="Đăng xuất" styleClass="nav-button" onAction="#handleLogout"
+                        maxWidth="Infinity"/>
+            </VBox>
+
+        </VBox>
+    </left>
+
+    <center>
+        <VBox>
+            <HBox styleClass="top-bar" alignment="CENTER_LEFT" spacing="0">
+                <Label fx:id="pageTitle" styleClass="page-title" text="Tổng quan" HBox.hgrow="ALWAYS"/>
+            </HBox>
+
+            <StackPane fx:id="contentPane" VBox.vgrow="ALWAYS" styleClass="content-area"/>
+        </VBox>
+    </center>
+
+</BorderPane>

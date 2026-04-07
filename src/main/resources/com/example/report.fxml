@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.controller.ReportController"
+            fitToWidth="true" fitToHeight="true"
+            styleClass="content-area">
+
+    <VBox spacing="24" style="-fx-padding: 8 0 0 0;">
+
+        <!-- Header -->
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <Label text="Báo cáo và thống kê" styleClass="section-header" HBox.hgrow="ALWAYS"/>
+            <ComboBox fx:id="yearCombo" prefWidth="100"/>
+            <Button text="Làm mới" styleClass="btn-outline" onAction="#refresh"/>
+        </HBox>
+
+        <!-- Monthly Stats -->
+        <VBox styleClass="card" spacing="12">
+            <Label text="Thống kê mượn sách theo tháng" styleClass="section-header"/>
+            <Separator/>
+            <TableView fx:id="monthlyTable" prefHeight="240">
+                <columns>
+                    <TableColumn fx:id="colMonth"   text="Tháng"          prefWidth="120"/>
+                    <TableColumn fx:id="colMonthly" text="Số lượt mượn"   prefWidth="200"/>
+                    <TableColumn fx:id="colBar"     text="Biểu đồ"        prefWidth="400"/>
+                </columns>
+                <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
+            </TableView>
+        </VBox>
+
+        <!-- Two Column: Top Books + Category Stats -->
+        <HBox spacing="16">
+
+            <!-- Top Borrowed Books -->
+            <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="12">
+                <Label text="Top 10 sách mượn nhiều nhất" styleClass="section-header"/>
+                <Separator/>
+                <TableView fx:id="topBooksTable" prefHeight="300">
+                    <columns>
+                        <TableColumn fx:id="colBRank"  text="#"           prefWidth="40"/>
+                        <TableColumn fx:id="colBTitle" text="Tên sách"    prefWidth="220"/>
+                        <TableColumn fx:id="colBCount" text="Lượt mượn"   prefWidth="90"/>
+                    </columns>
+                    <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
+                </TableView>
+            </VBox>
+
+            <!-- Books by Category -->
+            <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="12">
+                <Label text="Phân bổ sách theo danh mục" styleClass="section-header"/>
+                <Separator/>
+                <TableView fx:id="categoryTable" prefHeight="300">
+                    <columns>
+                        <TableColumn fx:id="colCatName"  text="Danh mục"   prefWidth="200"/>
+                        <TableColumn fx:id="colCatCount" text="Số sách"    prefWidth="90"/>
+                        <TableColumn fx:id="colCatBar"   text="Biểu đồ"   prefWidth="160"/>
+                    </columns>
+                    <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
+                </TableView>
+            </VBox>
+
+        </HBox>
+
+        <!-- Top Active Members -->
+        <VBox styleClass="card" spacing="12">
+            <Label text="Top 10 đọc giả tích cực nhất" styleClass="section-header"/>
+            <Separator/>
+            <TableView fx:id="topMembersTable" prefHeight="240">
+                <columns>
+                    <TableColumn fx:id="colMRank"  text="#"          prefWidth="40"/>
+                    <TableColumn fx:id="colMCode"  text="Mã TV"      prefWidth="80"/>
+                    <TableColumn fx:id="colMName"  text="Họ tên"     prefWidth="220"/>
+                    <TableColumn fx:id="colMCount" text="Lượt mượn"  prefWidth="100"/>
+                </columns>
+                <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
+            </TableView>
+        </VBox>
+
+    </VBox>
+</ScrollPane>
