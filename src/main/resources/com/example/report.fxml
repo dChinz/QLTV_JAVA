@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
@@ -13,37 +14,63 @@
 
         <!-- Header -->
         <HBox alignment="CENTER_LEFT" spacing="12">
-            <Label text="Báo cáo và thống kê" styleClass="section-header" HBox.hgrow="ALWAYS"/>
-            <ComboBox fx:id="yearCombo" prefWidth="100"/>
+            <Label text="Báo cáo &amp; Thống kê" styleClass="section-header" HBox.hgrow="ALWAYS"/>
+            <Label text="Năm:" style="-fx-text-fill: #64748B; -fx-font-size: 13px;"/>
+            <ComboBox fx:id="yearCombo" prefWidth="106"/>
             <Button text="Làm mới" styleClass="btn-outline" onAction="#refresh"/>
         </HBox>
 
-        <!-- Monthly Stats -->
+        <!-- KPI Summary Cards -->
+        <HBox spacing="16">
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                <Label fx:id="lblYearBorrows" styleClass="stat-card-value" text="—"/>
+                <Label text="Lượt mượn năm nay" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                <Label fx:id="lblTotalBooks" styleClass="stat-card-value" text="—"/>
+                <Label text="Tổng số sách" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                <Label fx:id="lblActiveMembers" styleClass="stat-card-value" text="—"/>
+                <Label text="Thành viên hoạt động" styleClass="stat-card-label"/>
+            </VBox>
+            <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" spacing="6">
+                <Label fx:id="lblOverdue" styleClass="stat-card-value" text="—" style="-fx-text-fill: #E11D48;"/>
+                <Label text="Đang quá hạn" styleClass="stat-card-label"/>
+            </VBox>
+        </HBox>
+
+        <!-- Monthly BarChart -->
         <VBox styleClass="card" spacing="12">
-            <Label text="Thống kê mượn sách theo tháng" styleClass="section-header"/>
+            <Label text="Lượt mượn theo tháng" styleClass="section-header"/>
             <Separator/>
-            <TableView fx:id="monthlyTable" prefHeight="240">
-                <columns>
-                    <TableColumn fx:id="colMonth"   text="Tháng"          prefWidth="120"/>
-                    <TableColumn fx:id="colMonthly" text="Số lượt mượn"   prefWidth="200"/>
-                    <TableColumn fx:id="colBar"     text="Biểu đồ"        prefWidth="400"/>
-                </columns>
-                <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
-            </TableView>
+            <BarChart fx:id="monthlyChart" prefHeight="280"
+                      legendVisible="false" animated="true"
+                      barGap="3" categoryGap="14">
+                <xAxis>
+                    <CategoryAxis fx:id="monthlyXAxis" side="BOTTOM"/>
+                </xAxis>
+                <yAxis>
+                    <NumberAxis fx:id="monthlyYAxis" side="LEFT"
+                                label="Lượt mượn" minorTickCount="4"/>
+                </yAxis>
+            </BarChart>
         </VBox>
 
-        <!-- Two Column: Top Books + Category Stats -->
+        <!-- Top Books + Category side by side -->
         <HBox spacing="16">
 
             <!-- Top Borrowed Books -->
             <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="12">
                 <Label text="Top 10 sách mượn nhiều nhất" styleClass="section-header"/>
                 <Separator/>
-                <TableView fx:id="topBooksTable" prefHeight="300">
+                <TableView fx:id="topBooksTable" prefHeight="320">
                     <columns>
-                        <TableColumn fx:id="colBRank"  text="#"           prefWidth="40"/>
-                        <TableColumn fx:id="colBTitle" text="Tên sách"    prefWidth="220"/>
-                        <TableColumn fx:id="colBCount" text="Lượt mượn"   prefWidth="90"/>
+                        <TableColumn fx:id="colBRank"   text="#"          prefWidth="36"/>
+                        <TableColumn fx:id="colBTitle"  text="Tên sách"   prefWidth="190"/>
+                        <TableColumn fx:id="colBAuthor" text="Tác giả"    prefWidth="120"/>
+                        <TableColumn fx:id="colBCount"  text="Lượt"       prefWidth="60"/>
+                        <TableColumn fx:id="colBBar"    text="Tỉ lệ"      prefWidth="110"/>
                     </columns>
                     <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
                 </TableView>
@@ -53,11 +80,11 @@
             <VBox styleClass="card" HBox.hgrow="ALWAYS" spacing="12">
                 <Label text="Phân bổ sách theo danh mục" styleClass="section-header"/>
                 <Separator/>
-                <TableView fx:id="categoryTable" prefHeight="300">
+                <TableView fx:id="categoryTable" prefHeight="320">
                     <columns>
-                        <TableColumn fx:id="colCatName"  text="Danh mục"   prefWidth="200"/>
-                        <TableColumn fx:id="colCatCount" text="Số sách"    prefWidth="90"/>
-                        <TableColumn fx:id="colCatBar"   text="Biểu đồ"   prefWidth="160"/>
+                        <TableColumn fx:id="colCatName"  text="Danh mục"  prefWidth="160"/>
+                        <TableColumn fx:id="colCatCount" text="Số sách"   prefWidth="70"/>
+                        <TableColumn fx:id="colCatBar"   text="Tỉ lệ"    prefWidth="160"/>
                     </columns>
                     <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
                 </TableView>
@@ -69,12 +96,13 @@
         <VBox styleClass="card" spacing="12">
             <Label text="Top 10 đọc giả tích cực nhất" styleClass="section-header"/>
             <Separator/>
-            <TableView fx:id="topMembersTable" prefHeight="240">
+            <TableView fx:id="topMembersTable" prefHeight="280">
                 <columns>
-                    <TableColumn fx:id="colMRank"  text="#"          prefWidth="40"/>
-                    <TableColumn fx:id="colMCode"  text="Mã TV"      prefWidth="80"/>
-                    <TableColumn fx:id="colMName"  text="Họ tên"     prefWidth="220"/>
-                    <TableColumn fx:id="colMCount" text="Lượt mượn"  prefWidth="100"/>
+                    <TableColumn fx:id="colMRank"  text="#"         prefWidth="36"/>
+                    <TableColumn fx:id="colMCode"  text="Mã TV"     prefWidth="90"/>
+                    <TableColumn fx:id="colMName"  text="Họ tên"    prefWidth="220"/>
+                    <TableColumn fx:id="colMCount" text="Lượt"      prefWidth="60"/>
+                    <TableColumn fx:id="colMBar"   text="Tỉ lệ"    prefWidth="220"/>
                 </columns>
                 <placeholder><Label text="Chưa có dữ liệu"/></placeholder>
             </TableView>

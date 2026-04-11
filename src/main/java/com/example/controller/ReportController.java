@@ -4,7 +4,13 @@ import com.example.service.ReportService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,15 +21,21 @@ public class ReportController {
 
     @FXML private ComboBox<Integer> yearCombo;
 
-    @FXML private TableView<Map<String, Object>> monthlyTable;
-    @FXML private TableColumn<Map<String, Object>, String> colMonth;
-    @FXML private TableColumn<Map<String, Object>, String> colMonthly;
-    @FXML private TableColumn<Map<String, Object>, String> colBar;
+    @FXML private Label lblYearBorrows;
+    @FXML private Label lblTotalBooks;
+    @FXML private Label lblActiveMembers;
+    @FXML private Label lblOverdue;
+
+    @FXML private BarChart<String, Number> monthlyChart;
+    @FXML private CategoryAxis monthlyXAxis;
+    @FXML private NumberAxis monthlyYAxis;
 
     @FXML private TableView<Map<String, Object>> topBooksTable;
     @FXML private TableColumn<Map<String, Object>, String> colBRank;
     @FXML private TableColumn<Map<String, Object>, String> colBTitle;
+    @FXML private TableColumn<Map<String, Object>, String> colBAuthor;
     @FXML private TableColumn<Map<String, Object>, String> colBCount;
+    @FXML private TableColumn<Map<String, Object>, String> colBBar;
 
     @FXML private TableView<Map<String, Object>> categoryTable;
     @FXML private TableColumn<Map<String, Object>, String> colCatName;
@@ -35,11 +47,13 @@ public class ReportController {
     @FXML private TableColumn<Map<String, Object>, String> colMCode;
     @FXML private TableColumn<Map<String, Object>, String> colMName;
     @FXML private TableColumn<Map<String, Object>, String> colMCount;
+    @FXML private TableColumn<Map<String, Object>, String> colMBar;
 
     private final ReportService reportService = new ReportService();
+
     private static final String[] MONTH_NAMES = {
-        "", "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
-        "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
+        "", "T1", "T2", "T3", "T4", "T5", "T6",
+        "T7", "T8", "T9", "T10", "T11", "T12"
     };
 
     @FXML
@@ -49,7 +63,6 @@ public class ReportController {
         yearCombo.setValue(currentYear);
         yearCombo.setOnAction(e -> loadData());
 
-        setupMonthlyTable();
         setupTopBooksTable();
         setupCategoryTable();
         setupTopMembersTable();
@@ -64,57 +77,88 @@ public class ReportController {
     private void loadData() {
         int year = yearCombo.getValue() != null ? yearCombo.getValue() : LocalDate.now().getYear();
 
-        // Monthly
+        // Monthly chart
         List<Map<String, Object>> monthly = reportService.getMonthlyBorrowStats(year);
-        long maxMonthly = monthly.stream()
-            .mapToLong(m -> ((Number) m.get("total")).longValue()).max().orElse(1);
-        monthly.forEach(m -> m.put("bar", buildBar(((Number) m.get("total")).longValue(), maxMonthly)));
-        monthlyTable.setItems(FXCollections.observableArrayList(monthly));
+        populateMonthlyChart(monthly);
+
+        long yearTotal = monthly.stream()
+            .mapToLong(m -> ((Number) m.get("total")).longValue()).sum();
+        lblYearBorrows.setText(String.valueOf(yearTotal));
+
+        // Dashboard KPIs
+        try {
+            Map<String, Object> stats = reportService.getDashboardStats();
+            lblTotalBooks.setText(String.valueOf(stats.get("totalBooks")));
+            lblActiveMembers.setText(String.valueOf(stats.get("totalMembers")));
+            lblOverdue.setText(String.valueOf(stats.get("overdueCount")));
+        } catch (Exception e) {
+            lblTotalBooks.setText("—");
+            lblActiveMembers.setText("—");
+            lblOverdue.setText("—");
+        }
 
         // Top books
         List<Map<String, Object>> topBooks = reportService.getTopBorrowedBooks(10);
         AtomicInteger rank = new AtomicInteger(1);
-        topBooks.forEach(m -> m.put("rank", String.valueOf(rank.getAndIncrement())));
+        long maxBook = topBooks.isEmpty() ? 1L
+            : ((Number) topBooks.get(0).get("borrowCount")).longValue();
+        topBooks.forEach(m -> {
+            m.put("rank", String.valueOf(rank.getAndIncrement()));
+            m.put("ratio", String.format("%.4f",
+                ((Number) m.get("borrowCount")).doubleValue() / maxBook));
+        });
         topBooksTable.setItems(FXCollections.observableArrayList(topBooks));
 
         // Category
         List<Map<String, Object>> cats = reportService.getBooksPerCategory();
         long maxCat = cats.stream()
             .mapToLong(m -> ((Number) m.get("bookCount")).longValue()).max().orElse(1);
-        cats.forEach(m -> m.put("bar", buildBar(((Number) m.get("bookCount")).longValue(), maxCat)));
+        cats.forEach(m -> m.put("ratio", String.format("%.4f",
+            ((Number) m.get("bookCount")).doubleValue() / maxCat)));
         categoryTable.setItems(FXCollections.observableArrayList(cats));
 
         // Top members
         List<Map<String, Object>> topMembers = reportService.getTopActiveMembers(10);
         rank.set(1);
-        topMembers.forEach(m -> m.put("rank", String.valueOf(rank.getAndIncrement())));
+        long maxMembers = topMembers.isEmpty() ? 1L
+            : ((Number) topMembers.get(0).get("borrowCount")).longValue();
+        topMembers.forEach(m -> {
+            m.put("rank", String.valueOf(rank.getAndIncrement()));
+            m.put("ratio", String.format("%.4f",
+                ((Number) m.get("borrowCount")).doubleValue() / maxMembers));
+        });
         topMembersTable.setItems(FXCollections.observableArrayList(topMembers));
     }
 
-    private String buildBar(long value, long max) {
-        int filled = max > 0 ? (int) (value * 20 / max) : 0;
-        return "█".repeat(filled) + " " + value;
-    }
-
-    private void setupMonthlyTable() {
-        colMonth.setCellValueFactory(c -> {
-            int m = ((Number) c.getValue().get("month")).intValue();
-            return new SimpleStringProperty(m < MONTH_NAMES.length ? MONTH_NAMES[m] : "Tháng " + m);
-        });
-        colMonthly.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().get("total"))));
-        colBar.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("bar")));
+    private void populateMonthlyChart(List<Map<String, Object>> monthly) {
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("Lượt mượn");
+        for (int i = 1; i <= 12; i++) {
+            final int month = i;
+            long val = monthly.stream()
+                .filter(m -> ((Number) m.get("month")).intValue() == month)
+                .mapToLong(m -> ((Number) m.get("total")).longValue())
+                .findFirst().orElse(0L);
+            series.getData().add(new XYChart.Data<>(MONTH_NAMES[month], val));
+        }
+        monthlyChart.getData().clear();
+        monthlyChart.getData().add(series);
     }
 
     private void setupTopBooksTable() {
         colBRank.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("rank")));
         colBTitle.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("title")));
+        colBAuthor.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("author")));
         colBCount.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().get("borrowCount"))));
+        colBBar.setCellFactory(col -> buildProgressCell("#4F46E5"));
+        colBBar.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("ratio")));
     }
 
     private void setupCategoryTable() {
         colCatName.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("category")));
         colCatCount.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().get("bookCount"))));
-        colCatBar.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("bar")));
+        colCatBar.setCellFactory(col -> buildProgressCell("#059669"));
+        colCatBar.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("ratio")));
     }
 
     private void setupTopMembersTable() {
@@ -122,5 +166,31 @@ public class ReportController {
         colMCode.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("memberCode")));
         colMName.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("fullName")));
         colMCount.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().get("borrowCount"))));
+        colMBar.setCellFactory(col -> buildProgressCell("#D97706"));
+        colMBar.setCellValueFactory(c -> new SimpleStringProperty((String) c.getValue().get("ratio")));
+    }
+
+    private TableCell<Map<String, Object>, String> buildProgressCell(String accent) {
+        return new TableCell<>() {
+            private final ProgressBar bar = new ProgressBar(0);
+            {
+                bar.setMaxWidth(Double.MAX_VALUE);
+                bar.setPrefHeight(10);
+                bar.setStyle("-fx-accent: " + accent + ";");
+                HBox.setHgrow(bar, Priority.ALWAYS);
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    return;
+                }
+                bar.setProgress(Double.parseDouble(item));
+                setGraphic(bar);
+                setText(null);
+            }
+        };
     }
 }

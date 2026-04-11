@@ -392,3 +392,64 @@
     -fx-border-color: transparent;
     -fx-background-color: transparent;
 }
+
+/* --- BarChart --- */
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 0 4 0 0;
+}
+
+.chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: transparent;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: #E2E8F0;
+    -fx-stroke-width: 1;
+}
+
+.chart-alternative-row-fill {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+}
+
+.axis {
+    -fx-tick-label-fill: #64748B;
+    -fx-font-size: 11px;
+}
+
+.axis-label {
+    -fx-text-fill: #94A3B8;
+    -fx-font-size: 11px;
+}
+
+.default-color0.chart-bar {
+    -fx-bar-fill: #4F46E5;
+    -fx-background-radius: 4 4 0 0;
+}
+
+.default-color0.chart-bar:hover {
+    -fx-bar-fill: #4338CA;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+}
+
+/* --- ProgressBar (report ratio cells) --- */
+.progress-bar .track {
+    -fx-background-color: #F1F5F9;
+    -fx-background-radius: 4;
+    -fx-border-color: transparent;
+}
+
+.progress-bar .bar {
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+    -fx-padding: 5;
+    -fx-background-color: -fx-accent;
+}
