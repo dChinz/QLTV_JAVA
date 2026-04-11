@@ -180,6 +180,17 @@ public class BookDAO {
         }
     }
 
+    /** Decrease total_copies by 1 when a book is permanently lost. */
+    public void decreaseTotalCopies(int bookId) {
+        String sql = "UPDATE books SET total_copies = total_copies - 1 WHERE id = ? AND total_copies > 0";
+        try (PreparedStatement ps = getConn().prepareStatement(sql)) {
+            ps.setInt(1, bookId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error decreasing total copies", e);
+        }
+    }
+
     public long countTotal() {
         try (Statement st = getConn().createStatement();
              ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM books WHERE deleted = FALSE")) {

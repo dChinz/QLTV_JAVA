@@ -180,14 +180,17 @@ public class BorrowController {
 
     private void handleMarkLost(BorrowRecord record) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-            "Đánh dấu sách \"" + record.getBookTitle() + "\" là MẤT?",
+            "Đánh dấu sách \"" + record.getBookTitle() + "\" là MẤT?\n"
+                + "Phí bồi thường sách mất: 200,000đ sẽ được ghi vào phiếu phạt.",
             ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText(null);
+        confirm.setHeaderText("Xác nhận mất sách");
         confirm.showAndWait().ifPresent(t -> {
             if (t == ButtonType.YES) {
                 try {
-                    borrowService.markAsLost(record.getId());
+                    Fine fine = borrowService.markAsLost(record.getId());
                     loadRecords();
+                    showInfo("Đã đánh dấu mất sách.\nPhí bồi thường: "
+                        + fine.getAmount().toPlainString() + "đ\nLý do: " + fine.getReason());
                 } catch (Exception e) { showError(e.getMessage()); }
             }
         });

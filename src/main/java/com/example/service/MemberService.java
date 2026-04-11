@@ -9,7 +9,16 @@ import java.util.Optional;
 
 public class MemberService {
 
-    private final MemberDAO memberDAO = new MemberDAO();
+    private final MemberDAO memberDAO;
+
+    public MemberService() {
+        this.memberDAO = new MemberDAO();
+    }
+
+    /** Package-private constructor for testing. */
+    MemberService(MemberDAO memberDAO) {
+        this.memberDAO = memberDAO;
+    }
 
     public List<Member> getAllMembers() {
         return memberDAO.findAll();

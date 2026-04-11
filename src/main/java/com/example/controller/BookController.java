@@ -55,7 +55,7 @@ public class BookController {
         });
         colActions.setCellFactory(col -> new TableCell<>() {
             private final Button editBtn   = new Button("Sửa");
-            private final Button deleteBtn = new Button("Ẩn");
+            private final Button deleteBtn = new Button("Xóa");
             private final HBox   box       = new HBox(6, editBtn, deleteBtn);
             {
                 editBtn.getStyleClass().add("btn-outline");
@@ -116,16 +116,15 @@ public class BookController {
 
     private void handleDelete(Book book) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-            "Ẩn sách \"" + book.getTitle() + "\" khỏi danh sách?\n"
-                + "(Dữ liệu và lịch sử mượn vẫn được giữ trong hệ thống.)",
+            "Xóa sách \"" + book.getTitle() + "\" khỏi danh sách?",
             ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("Ẩn sách (soft delete)");
+        confirm.setHeaderText("Xác nhận xóa sách");
         confirm.showAndWait().ifPresent(type -> {
             if (type == ButtonType.YES) {
                 try {
                     bookService.deleteBook(book.getId());
                     loadBooks();
-                    showInfo("Đã ẩn sách khỏi danh sách.");
+                    showInfo("Đã xóa sách khỏi danh sách.");
                 } catch (Exception e) {
                     showError(e.getMessage());
                 }

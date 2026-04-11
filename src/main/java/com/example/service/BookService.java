@@ -8,7 +8,16 @@ import java.util.Optional;
 
 public class BookService {
 
-    private final BookDAO bookDAO = new BookDAO();
+    private final BookDAO bookDAO;
+
+    public BookService() {
+        this.bookDAO = new BookDAO();
+    }
+
+    /** Package-private constructor for testing. */
+    BookService(BookDAO bookDAO) {
+        this.bookDAO = bookDAO;
+    }
 
     public List<Book> getAllBooks() {
         return bookDAO.findAll();

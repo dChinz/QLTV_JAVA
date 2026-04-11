@@ -18,13 +18,30 @@ public class BorrowService {
 
     /** Fine rate: 5,000 VND per overdue day */
     public static final BigDecimal FINE_PER_DAY = new BigDecimal("5000");
+    /** Replacement fee for a lost book */
+    public static final BigDecimal LOST_BOOK_FEE = new BigDecimal("200000");
     /** Default loan period in days */
     public static final int DEFAULT_LOAN_DAYS = 14;
 
-    private final BorrowRecordDAO borrowDAO = new BorrowRecordDAO();
-    private final BookDAO bookDAO = new BookDAO();
-    private final MemberDAO memberDAO = new MemberDAO();
-    private final FineDAO fineDAO = new FineDAO();
+    private final BorrowRecordDAO borrowDAO;
+    private final BookDAO bookDAO;
+    private final MemberDAO memberDAO;
+    private final FineDAO fineDAO;
+
+    public BorrowService() {
+        this.borrowDAO = new BorrowRecordDAO();
+        this.bookDAO = new BookDAO();
+        this.memberDAO = new MemberDAO();
+        this.fineDAO = new FineDAO();
+    }
+
+    /** Package-private constructor for testing. */
+    BorrowService(BorrowRecordDAO borrowDAO, BookDAO bookDAO, MemberDAO memberDAO, FineDAO fineDAO) {
+        this.borrowDAO = borrowDAO;
+        this.bookDAO = bookDAO;
+        this.memberDAO = memberDAO;
+        this.fineDAO = fineDAO;
+    }
 
     public List<BorrowRecord> getAllRecords() {
         return borrowDAO.findAll();
@@ -106,13 +123,23 @@ public class BorrowService {
         return Optional.ofNullable(fine);
     }
 
-    public void markAsLost(int borrowRecordId) {
+    /**
+     * Marks a borrow record as LOST.
+     * Reduces total_copies for the book and creates a replacement fee fine.
+     */
+    public Fine markAsLost(int borrowRecordId) {
         BorrowRecord record = borrowDAO.findById(borrowRecordId)
             .orElseThrow(() -> new IllegalArgumentException("Phiếu mượn không tồn tại."));
         if (record.getStatus() == BorrowRecord.Status.RETURNED)
             throw new IllegalStateException("Phiếu mượn đã được đóng.");
         record.setStatus(BorrowRecord.Status.LOST);
         borrowDAO.update(record);
+        // The physical copy is permanently gone — reduce total_copies
+        bookDAO.decreaseTotalCopies(record.getBookId());
+        // Create a fixed replacement fine
+        Fine fine = new Fine(record.getId(), LOST_BOOK_FEE, "Mất sách - phí bồi thường 200,000đ");
+        fineDAO.save(fine);
+        return fine;
     }
 
     public int syncOverdueStatuses() {

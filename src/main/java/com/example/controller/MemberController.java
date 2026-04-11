@@ -63,7 +63,7 @@ public class MemberController {
         colActions.setCellFactory(col -> new TableCell<>() {
             private final Button editBtn   = new Button("Sửa");
             private final Button renewBtn  = new Button("Gia hạn");
-            private final Button deleteBtn = new Button("Ẩn");
+            private final Button deleteBtn = new Button("Xóa");
             private final HBox   box       = new HBox(6, editBtn, renewBtn, deleteBtn);
             {
                 editBtn.getStyleClass().add("btn-outline");
@@ -121,16 +121,15 @@ public class MemberController {
 
     private void handleDelete(Member member) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-            "Ẩn đọc giả \"" + member.getFullName() + "\" khỏi danh sách?\n"
-                + "(Dữ liệu và lịch sử mượn vẫn được giữ trong hệ thống.)",
+            "Xóa đọc giả \"" + member.getFullName() + "\" khỏi danh sách?",
             ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText("Ẩn đọc giả (soft delete)");
+        confirm.setHeaderText("Xác nhận xóa đọc giả");
         confirm.showAndWait().ifPresent(t -> {
             if (t == ButtonType.YES) {
                 try {
                     memberService.deleteMember(member.getId());
                     loadMembers();
-                    showInfo("Đã ẩn đọc giả khỏi danh sách.");
+                    showInfo("Đã xóa đọc giả khỏi danh sách.");
                 } catch (Exception e) { showError(e.getMessage()); }
             }
         });
