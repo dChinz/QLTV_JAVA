@@ -11,6 +11,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,7 @@ public class MemberController {
     @FXML private TextField searchField;
     @FXML private ComboBox<String> statusFilter;
     @FXML private TableView<Member> memberTable;
+    @FXML private TableColumn<Member, Void>   colSTT;
     @FXML private TableColumn<Member, String> colCode;
     @FXML private TableColumn<Member, String> colName;
     @FXML private TableColumn<Member, String> colPhone;
@@ -26,7 +28,15 @@ public class MemberController {
     @FXML private TableColumn<Member, String> colExpiry;
     @FXML private TableColumn<Member, String> colStatus;
     @FXML private TableColumn<Member, Void>   colActions;
-    @FXML private Label statusLabel;
+    @FXML private Label  statusLabel;
+    @FXML private Button prevPageBtn;
+    @FXML private Button nextPageBtn;
+    @FXML private Label  pageInfoLabel;
+
+    private static final int PAGE_SIZE   = 20;
+    private int            currentPage   = 0;
+    private List<Member>   masterList    = new ArrayList<>();
+    private List<Member>   filteredList  = new ArrayList<>();
 
     private final MemberService memberService = new MemberService();
 
@@ -36,10 +46,18 @@ public class MemberController {
         statusFilter.setValue("Tất cả");
         setupColumns();
         memberService.syncExpiredStatuses();
+        searchField.textProperty().addListener((obs, o, n) -> applyFilter());
+        statusFilter.valueProperty().addListener((obs, o, n) -> applyFilter());
         loadMembers();
     }
 
     private void setupColumns() {
+        colSTT.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(currentPage * PAGE_SIZE + getIndex() + 1));
+            }
+        });
         colCode.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getMemberCode()));
         colName.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getFullName()));
         colPhone.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPhone()));
@@ -84,16 +102,46 @@ public class MemberController {
     }
 
     @FXML
-    private void handleSearch() {
-        String kw = searchField.getText().trim();
+    private void handleSearch() { applyFilter(); }
+
+    private void applyFilter() {
+        String kw = searchField.getText().toLowerCase().trim();
         String statusVal = statusFilter.getValue();
-        List<Member> list = memberService.searchMembers(kw);
-        if (statusVal != null && !"Tất cả".equals(statusVal)) {
-            Member.Status st = Member.Status.valueOf(statusVal);
-            list = list.stream().filter(m -> m.getStatus() == st).toList();
-        }
-        memberTable.setItems(FXCollections.observableArrayList(list));
-        statusLabel.setText("Tìm thấy " + list.size() + " đọc giả");
+        filteredList = masterList.stream()
+            .filter(m -> {
+                boolean statusOk = statusVal == null || "Tất cả".equals(statusVal)
+                    || m.getStatus().name().equals(statusVal);
+                boolean kwOk = kw.isEmpty()
+                    || m.getFullName().toLowerCase().contains(kw)
+                    || m.getMemberCode().toLowerCase().contains(kw)
+                    || m.getPhone().toLowerCase().contains(kw);
+                return statusOk && kwOk;
+            })
+            .sorted(java.util.Comparator.comparing(Member::getFullName))
+            .toList();
+        currentPage = 0;
+        showPage();
+    }
+
+    private void showPage() {
+        int from = currentPage * PAGE_SIZE;
+        int to   = Math.min(from + PAGE_SIZE, filteredList.size());
+        memberTable.setItems(FXCollections.observableArrayList(
+            from < filteredList.size() ? filteredList.subList(from, to) : List.of()));
+        int totalPages = Math.max(1, (int) Math.ceil((double) filteredList.size() / PAGE_SIZE));
+        pageInfoLabel.setText("Trang " + (currentPage + 1) + " / " + totalPages);
+        statusLabel.setText(filteredList.size() + " đọc giả");
+        prevPageBtn.setDisable(currentPage == 0);
+        nextPageBtn.setDisable((currentPage + 1) * PAGE_SIZE >= filteredList.size());
+        memberTable.refresh();
+    }
+
+    @FXML private void prevPage() { if (currentPage > 0) { currentPage--; showPage(); } }
+    @FXML private void nextPage() { if ((currentPage + 1) * PAGE_SIZE < filteredList.size()) { currentPage++; showPage(); } }
+
+    private void loadMembers() {
+        masterList = memberService.getAllMembers();
+        applyFilter();
     }
 
     @FXML
@@ -170,7 +218,44 @@ public class MemberController {
             grid.add(statusCombo,               1, 5);
         }
 
+        Label formError = new Label();
+        formError.setVisible(false);
+        formError.setManaged(false);
+        formError.setWrapText(true);
+        formError.setMaxWidth(320);
+        formError.setStyle("-fx-text-fill: #E11D48; -fx-font-size: 12px;");
+        grid.add(formError, 0, isEdit ? 6 : 5, 2, 1);
+
         dialog.getDialogPane().setContent(grid);
+
+        Button saveBtn = (Button) dialog.getDialogPane().lookupButton(saveType);
+        saveBtn.addEventFilter(javafx.event.ActionEvent.ACTION, evt -> {
+            List<String> errs = new ArrayList<>();
+            if (nameField.getText().isBlank()) {
+                errs.add("• Họ tên không được để trống.");
+                nameField.setStyle("-fx-border-color: #E11D48;");
+            }
+            String email = emailField.getText().trim();
+            if (!email.isEmpty() && !email.matches("^[\\w+.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
+                errs.add("• Email không đúng định dạng.");
+                emailField.setStyle("-fx-border-color: #E11D48;");
+            }
+            String phone = phoneField.getText().trim();
+            if (!phone.isEmpty() && !phone.matches("^(0|\\+84)\\d{9,10}$")) {
+                errs.add("• Số điện thoại không hợp lệ (bắt đầu 0 hoặc +84, 10-11 chữ số).");
+                phoneField.setStyle("-fx-border-color: #E11D48;");
+            }
+            if (!errs.isEmpty()) {
+                formError.setText(String.join("\n", errs));
+                formError.setVisible(true);
+                formError.setManaged(true);
+                evt.consume();
+            }
+        });
+        nameField.textProperty().addListener((obs, o, n) -> { nameField.setStyle(""); formError.setVisible(false); formError.setManaged(false); });
+        emailField.textProperty().addListener((obs, o, n) -> { emailField.setStyle(""); formError.setVisible(false); formError.setManaged(false); });
+        phoneField.textProperty().addListener((obs, o, n) -> { phoneField.setStyle(""); formError.setVisible(false); formError.setManaged(false); });
+
         dialog.setResultConverter(bt -> {
             if (bt == saveType) {
                 Member m = isEdit ? member : new Member();
@@ -195,12 +280,6 @@ public class MemberController {
                 showInfo(isEdit ? "Cập nhật thành công." : "Thêm đọc giả thành công.");
             } catch (Exception e) { showError(e.getMessage()); }
         });
-    }
-
-    private void loadMembers() {
-        List<Member> list = memberService.getAllMembers();
-        memberTable.setItems(FXCollections.observableArrayList(list));
-        statusLabel.setText("Tổng cộng " + list.size() + " đọc giả");
     }
 
     private void showError(String msg) {

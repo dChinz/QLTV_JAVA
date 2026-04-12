@@ -11,10 +11,8 @@
     <!-- Toolbar -->
     <HBox spacing="12" alignment="CENTER_LEFT">
         <TextField fx:id="searchField" promptText="Tìm theo tên, tác giả, ISBN..."
-                   styleClass="search-field" HBox.hgrow="ALWAYS" onAction="#handleSearch"/>
-        <ComboBox fx:id="categoryFilter" promptText="Tất cả danh mục" prefWidth="200"
-                  onAction="#handleSearch"/>
-        <Button text="Tìm kiếm" styleClass="btn-primary" onAction="#handleSearch"/>
+                   styleClass="search-field" HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="categoryFilter" promptText="Tất cả danh mục" prefWidth="200"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button text="Thêm sách" styleClass="btn-success" onAction="#handleAdd"/>
     </HBox>
@@ -22,19 +20,24 @@
     <!-- Table -->
     <TableView fx:id="bookTable" VBox.vgrow="ALWAYS">
         <columns>
-            <TableColumn fx:id="colId"        text="ID"         prefWidth="50"/>
-            <TableColumn fx:id="colIsbn"      text="ISBN"       prefWidth="130"/>
-            <TableColumn fx:id="colTitle"     text="Tên sách"   prefWidth="240"/>
-            <TableColumn fx:id="colAuthor"    text="Tác giả"    prefWidth="140"/>
-            <TableColumn fx:id="colCategory"  text="Danh mục"   prefWidth="140"/>
-            <TableColumn fx:id="colTotal"     text="Tổng SL"    prefWidth="70"/>
-            <TableColumn fx:id="colAvailable" text="Còn lại"    prefWidth="70"/>
-            <TableColumn fx:id="colActions"   text="Thao tác"   prefWidth="160"/>
+            <TableColumn fx:id="colSTT"      text="STT"       prefWidth="50"/>
+            <TableColumn fx:id="colIsbn"     text="ISBN"      prefWidth="130"/>
+            <TableColumn fx:id="colTitle"    text="Tên sách"  prefWidth="240"/>
+            <TableColumn fx:id="colAuthor"   text="Tác giả"   prefWidth="140"/>
+            <TableColumn fx:id="colCategory" text="Danh mục"  prefWidth="140"/>
+            <TableColumn fx:id="colTotal"    text="Tổng SL"   prefWidth="70"/>
+            <TableColumn fx:id="colAvailable" text="Còn lại"  prefWidth="70"/>
+            <TableColumn fx:id="colActions"  text="Thao tác"  prefWidth="160"/>
         </columns>
         <placeholder><Label text="Không tìm thấy sách nào"/></placeholder>
     </TableView>
 
-    <!-- Status bar -->
-    <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;"/>
+    <!-- Pagination -->
+    <HBox alignment="CENTER_LEFT" spacing="8">
+        <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;" HBox.hgrow="ALWAYS"/>
+        <Button fx:id="prevPageBtn" text="← Trước" styleClass="btn-outline" onAction="#prevPage"/>
+        <Label fx:id="pageInfoLabel" text="Trang 1 / 1" style="-fx-font-size: 12px;"/>
+        <Button fx:id="nextPageBtn" text="Sau →" styleClass="btn-outline" onAction="#nextPage"/>
+    </HBox>
 
 </VBox>

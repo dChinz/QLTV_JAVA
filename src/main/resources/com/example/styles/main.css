@@ -453,3 +453,39 @@
     -fx-padding: 5;
     -fx-background-color: -fx-accent;
 }
+
+/* --- Password Toggle Wrapper --- */
+.password-wrapper {
+    -fx-background-color: white;
+    -fx-border-color: #CBD5E1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.password-field-inner {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 8 0 0 8;
+    -fx-padding: 8 4 8 12;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1E293B;
+}
+
+.password-toggle-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #94A3B8;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6 12 6 6;
+    -fx-background-radius: 0 8 8 0;
+}
+
+.password-toggle-btn:hover {
+    -fx-text-fill: #4F46E5;
+    -fx-icon-color: #4F46E5;
+}
+
+/* --- Validation Error Border --- */
+.field-error {
+    -fx-border-color: #E11D48;
+}

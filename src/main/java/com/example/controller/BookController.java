@@ -12,6 +12,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,7 +21,7 @@ public class BookController {
     @FXML private TextField    searchField;
     @FXML private ComboBox<Category> categoryFilter;
     @FXML private TableView<Book> bookTable;
-    @FXML private TableColumn<Book, String> colId;
+    @FXML private TableColumn<Book, Void>   colSTT;
     @FXML private TableColumn<Book, String> colIsbn;
     @FXML private TableColumn<Book, String> colTitle;
     @FXML private TableColumn<Book, String> colAuthor;
@@ -28,7 +29,15 @@ public class BookController {
     @FXML private TableColumn<Book, String> colTotal;
     @FXML private TableColumn<Book, String> colAvailable;
     @FXML private TableColumn<Book, Void>   colActions;
-    @FXML private Label statusLabel;
+    @FXML private Label  statusLabel;
+    @FXML private Button prevPageBtn;
+    @FXML private Button nextPageBtn;
+    @FXML private Label  pageInfoLabel;
+
+    private static final int PAGE_SIZE = 20;
+    private int          currentPage  = 0;
+    private List<Book>   masterList   = new ArrayList<>();
+    private List<Book>   filteredList = new ArrayList<>();
 
     private final BookService     bookService     = new BookService();
     private final CategoryDAO     categoryDAO     = new CategoryDAO();
@@ -38,21 +47,24 @@ public class BookController {
     public void initialize() {
         setupColumns();
         loadCategories();
+        searchField.textProperty().addListener((obs, o, n) -> applyFilter());
+        categoryFilter.valueProperty().addListener((obs, o, n) -> applyFilter());
         loadBooks();
     }
 
     private void setupColumns() {
-        colId.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getId())));
+        colSTT.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(currentPage * PAGE_SIZE + getIndex() + 1));
+            }
+        });
         colIsbn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getIsbn()));
         colTitle.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getTitle()));
         colAuthor.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getAuthor()));
         colCategory.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getCategoryName()));
         colTotal.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getTotalCopies())));
-        colAvailable.setCellValueFactory(c -> {
-            int avail = c.getValue().getAvailableCopies();
-            String val = String.valueOf(avail);
-            return new SimpleStringProperty(val);
-        });
+        colAvailable.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getAvailableCopies())));
         colActions.setCellFactory(col -> new TableCell<>() {
             private final Button editBtn   = new Button("Sửa");
             private final Button deleteBtn = new Button("Xóa");
@@ -79,30 +91,42 @@ public class BookController {
         categoryFilter.getItems().addAll(categories);
     }
 
-    @FXML
-    private void handleSearch() {
-        String keyword = searchField.getText().trim();
-        Category selected = categoryFilter.getValue();
-        List<Book> books;
-        if (selected != null) {
-            books = bookService.getBooksByCategory(selected.getId());
-            if (!keyword.isEmpty()) {
-                String kw = keyword.toLowerCase();
-                books = books.stream()
-                    .filter(b -> b.getTitle().toLowerCase().contains(kw) || b.getAuthor().toLowerCase().contains(kw))
-                    .toList();
-            }
-        } else {
-            books = bookService.searchBooks(keyword);
-        }
-        bookTable.setItems(FXCollections.observableArrayList(books));
-        statusLabel.setText("Tìm thấy " + books.size() + " sách");
+    private void applyFilter() {
+        String kw       = searchField.getText().toLowerCase().trim();
+        Category cat    = categoryFilter.getValue();
+        filteredList = masterList.stream()
+            .filter(b -> (cat == null || b.getCategoryId() == cat.getId())
+                      && (kw.isEmpty()
+                          || b.getTitle().toLowerCase().contains(kw)
+                          || b.getAuthor().toLowerCase().contains(kw)
+                          || b.getIsbn().toLowerCase().contains(kw)))
+            .sorted(java.util.Comparator.comparing(Book::getTitle))
+            .toList();
+        currentPage = 0;
+        showPage();
     }
 
+    private void showPage() {
+        int from = currentPage * PAGE_SIZE;
+        int to   = Math.min(from + PAGE_SIZE, filteredList.size());
+        bookTable.setItems(FXCollections.observableArrayList(
+            from < filteredList.size() ? filteredList.subList(from, to) : List.of()));
+        int totalPages = Math.max(1, (int) Math.ceil((double) filteredList.size() / PAGE_SIZE));
+        pageInfoLabel.setText("Trang " + (currentPage + 1) + " / " + totalPages);
+        statusLabel.setText(filteredList.size() + " sách");
+        prevPageBtn.setDisable(currentPage == 0);
+        nextPageBtn.setDisable((currentPage + 1) * PAGE_SIZE >= filteredList.size());
+        bookTable.refresh();
+    }
+
+    @FXML private void prevPage() { if (currentPage > 0) { currentPage--; showPage(); } }
+    @FXML private void nextPage() { if ((currentPage + 1) * PAGE_SIZE < filteredList.size()) { currentPage++; showPage(); } }
+
+    @FXML private void handleSearch() { applyFilter(); }
+
     private void loadBooks() {
-        List<Book> books = bookService.getAllBooks();
-        bookTable.setItems(FXCollections.observableArrayList(books));
-        statusLabel.setText("Tổng cộng " + books.size() + " sách");
+        masterList = bookService.getAllBooks();
+        applyFilter();
     }
 
     @FXML
@@ -171,7 +195,47 @@ public class BookController {
         grid.add(new Label("Số lượng *:"), 0, 6); grid.add(copiesField,    1, 6);
         grid.add(new Label("Mô tả:"),      0, 7); grid.add(descArea,       1, 7);
 
+        Label formError = new Label();
+        formError.setVisible(false);
+        formError.setManaged(false);
+        formError.setWrapText(true);
+        formError.setMaxWidth(360);
+        formError.setStyle("-fx-text-fill: #E11D48; -fx-font-size: 12px;");
+        grid.add(formError, 0, 8, 2, 1);
+
         dialog.getDialogPane().setContent(grid);
+
+        Button saveBtn = (Button) dialog.getDialogPane().lookupButton(saveType);
+        saveBtn.addEventFilter(javafx.event.ActionEvent.ACTION, evt -> {
+            List<String> errs = new ArrayList<>();
+            if (titleField.getText().isBlank()) {
+                errs.add("• Tên sách không được để trống.");
+                titleField.setStyle("-fx-border-color: #E11D48;");
+            }
+            if (authorField.getText().isBlank()) {
+                errs.add("• Tác giả không được để trống.");
+                authorField.setStyle("-fx-border-color: #E11D48;");
+            }
+            try {
+                int c = Integer.parseInt(copiesField.getText().trim());
+                if (c < 1) {
+                    errs.add("• Số lượng phải lớn hơn 0.");
+                    copiesField.setStyle("-fx-border-color: #E11D48;");
+                }
+            } catch (NumberFormatException ex) {
+                errs.add("• Số lượng phải là số nguyên dương.");
+                copiesField.setStyle("-fx-border-color: #E11D48;");
+            }
+            if (!errs.isEmpty()) {
+                formError.setText(String.join("\n", errs));
+                formError.setVisible(true);
+                formError.setManaged(true);
+                evt.consume();
+            }
+        });
+        titleField.textProperty().addListener((obs, o, n) -> { titleField.setStyle(""); formError.setVisible(false); formError.setManaged(false); });
+        authorField.textProperty().addListener((obs, o, n) -> { authorField.setStyle(""); formError.setVisible(false); formError.setManaged(false); });
+        copiesField.textProperty().addListener((obs, o, n) -> { copiesField.setStyle(""); formError.setVisible(false); formError.setManaged(false); });
 
         dialog.setResultConverter(btnType -> {
             if (btnType == saveType) {

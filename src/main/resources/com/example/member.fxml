@@ -11,10 +11,8 @@
     <!-- Toolbar -->
     <HBox spacing="12" alignment="CENTER_LEFT">
         <TextField fx:id="searchField" promptText="Tìm theo tên, mã thẻ, SĐT..."
-                   styleClass="search-field" HBox.hgrow="ALWAYS" onAction="#handleSearch"/>
-        <ComboBox fx:id="statusFilter" promptText="Tất cả trạng thái" prefWidth="180"
-                  onAction="#handleSearch"/>
-        <Button text="Tìm kiếm" styleClass="btn-primary" onAction="#handleSearch"/>
+                   styleClass="search-field" HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="statusFilter" promptText="Tất cả trạng thái" prefWidth="180"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button text="Thêm đọc giả" styleClass="btn-success" onAction="#handleAdd"/>
     </HBox>
@@ -22,16 +20,23 @@
     <!-- Table -->
     <TableView fx:id="memberTable" VBox.vgrow="ALWAYS">
         <columns>
-            <TableColumn fx:id="colCode"    text="Mã thẻ"     prefWidth="80"/>
-            <TableColumn fx:id="colName"    text="Họ tên"      prefWidth="180"/>
-            <TableColumn fx:id="colPhone"   text="SĐT"         prefWidth="110"/>
-            <TableColumn fx:id="colEmail"   text="Email"       prefWidth="180"/>
-            <TableColumn fx:id="colExpiry"  text="Hạn thẻ"     prefWidth="100"/>
-            <TableColumn fx:id="colStatus"  text="Trạng thái"  prefWidth="100"/>
-            <TableColumn fx:id="colActions" text="Thao tác"    prefWidth="220"/>
+            <TableColumn fx:id="colSTT"    text="STT"         prefWidth="50"/>
+            <TableColumn fx:id="colCode"   text="Mã thẻ"      prefWidth="80"/>
+            <TableColumn fx:id="colName"   text="Họ tên"      prefWidth="180"/>
+            <TableColumn fx:id="colPhone"  text="SĐT"         prefWidth="110"/>
+            <TableColumn fx:id="colEmail"  text="Email"       prefWidth="180"/>
+            <TableColumn fx:id="colExpiry" text="Hạn thẻ"     prefWidth="100"/>
+            <TableColumn fx:id="colStatus" text="Trạng thái"  prefWidth="100"/>
+            <TableColumn fx:id="colActions" text="Thao tác"   prefWidth="220"/>
         </columns>
         <placeholder><Label text="Không tìm thấy đọc giả nào"/></placeholder>
     </TableView>
 
-    <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;"/>
+    <!-- Pagination -->
+    <HBox alignment="CENTER_LEFT" spacing="8">
+        <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;" HBox.hgrow="ALWAYS"/>
+        <Button fx:id="prevPageBtn" text="← Trước" styleClass="btn-outline" onAction="#prevPage"/>
+        <Label fx:id="pageInfoLabel" text="Trang 1 / 1" style="-fx-font-size: 12px;"/>
+        <Button fx:id="nextPageBtn" text="Sau →" styleClass="btn-outline" onAction="#nextPage"/>
+    </HBox>
 </VBox>

@@ -23,15 +23,24 @@
     <!-- Toolbar -->
     <HBox spacing="12" alignment="CENTER_LEFT">
         <TextField fx:id="searchField" promptText="Tìm theo tên đọc giả, tên sách..."
-                   styleClass="search-field" HBox.hgrow="ALWAYS" onAction="#handleSearch"/>
-        <ComboBox fx:id="paidFilter" promptText="Tất cả" prefWidth="160" onAction="#handleSearch"/>
-        <Button text="Tìm kiếm" styleClass="btn-primary" onAction="#handleSearch"/>
+                   styleClass="search-field" HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="paidFilter" promptText="Tất cả" prefWidth="160"/>
+    </HBox>
+
+    <!-- Date range row -->
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label text="Từ ngày:" style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+        <DatePicker fx:id="fromDatePicker" prefWidth="130"/>
+        <Label text="Đến ngày:" style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+        <DatePicker fx:id="toDatePicker" prefWidth="130"/>
+        <Button text="Xóa bộ lọc" styleClass="btn-outline" onAction="#clearDateFilter"
+                style="-fx-font-size:11px; -fx-padding:5 12 5 12;"/>
     </HBox>
 
     <!-- Table -->
     <TableView fx:id="fineTable" VBox.vgrow="ALWAYS">
         <columns>
-            <TableColumn fx:id="colId"         text="ID"            prefWidth="50"/>
+            <TableColumn fx:id="colSTT"        text="STT"           prefWidth="50"/>
             <TableColumn fx:id="colMember"     text="Đọc giả"       prefWidth="180"/>
             <TableColumn fx:id="colBook"       text="Sách"          prefWidth="200"/>
             <TableColumn fx:id="colDueDate"    text="Hạn trả"       prefWidth="100"/>
@@ -44,5 +53,11 @@
         <placeholder><Label text="Không có phí phạt nào"/></placeholder>
     </TableView>
 
-    <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;"/>
+    <!-- Pagination -->
+    <HBox alignment="CENTER_LEFT" spacing="8">
+        <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;" HBox.hgrow="ALWAYS"/>
+        <Button fx:id="prevPageBtn" text="← Trước" styleClass="btn-outline" onAction="#prevPage"/>
+        <Label fx:id="pageInfoLabel" text="Trang 1 / 1" style="-fx-font-size: 12px;"/>
+        <Button fx:id="nextPageBtn" text="Sau →" styleClass="btn-outline" onAction="#nextPage"/>
+    </HBox>
 </VBox>

@@ -5,6 +5,10 @@ module com.example.management {
     requires java.sql;
     requires mysql.connector.j;
     requires jbcrypt;
+    requires org.kordamp.ikonli.core;
+    requires org.kordamp.ikonli.javafx;
+    requires org.kordamp.ikonli.fontawesome6;
+    uses org.kordamp.ikonli.IkonProvider;
 
     opens com.example to javafx.fxml;
     opens com.example.controller to javafx.fxml;

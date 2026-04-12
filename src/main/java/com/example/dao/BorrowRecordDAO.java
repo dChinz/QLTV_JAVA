@@ -184,4 +184,35 @@ public class BorrowRecordDAO {
         }
         return 0;
     }
+
+    public List<BorrowRecord> findByDateRange(java.time.LocalDate from, java.time.LocalDate to) {
+        List<BorrowRecord> list = new ArrayList<>();
+        String sql = JOIN_SQL + " WHERE br.borrow_date BETWEEN ? AND ? ORDER BY br.borrow_date DESC";
+        try (PreparedStatement ps = getConn().prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(mapRow(rs));
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching borrow records by date range", e);
+        }
+        return list;
+    }
+
+    public List<BorrowRecord> searchWithDateRange(String keyword, java.time.LocalDate from, java.time.LocalDate to) {
+        List<BorrowRecord> list = new ArrayList<>();
+        String sql = JOIN_SQL + " WHERE (m.full_name LIKE ? OR m.member_code LIKE ? OR b.title LIKE ?)" +
+                     " AND br.borrow_date BETWEEN ? AND ? ORDER BY br.borrow_date DESC";
+        try (PreparedStatement ps = getConn().prepareStatement(sql)) {
+            String kw = "%" + keyword + "%";
+            ps.setString(1, kw); ps.setString(2, kw); ps.setString(3, kw);
+            ps.setDate(4, Date.valueOf(from));
+            ps.setDate(5, Date.valueOf(to));
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(mapRow(rs));
+        } catch (SQLException e) {
+            throw new RuntimeException("Error searching borrow records with date range", e);
+        }
+        return list;
+    }
 }

@@ -42,6 +42,8 @@
             <Separator/>
             <VBox style="-fx-padding: 12;" spacing="4">
                 <Label fx:id="userLabel" styleClass="user-info-label" text=""/>
+                <Button text="Đổi mật khẩu" styleClass="nav-button" onAction="#handleChangePassword"
+                        maxWidth="Infinity"/>
                 <Button text="Đăng xuất" styleClass="nav-button" onAction="#handleLogout"
                         maxWidth="Infinity"/>
             </VBox>

@@ -38,9 +38,17 @@
             <!-- Password -->
             <VBox spacing="6">
                 <Label styleClass="form-label" text="Mật khẩu"/>
-                <PasswordField fx:id="passwordField" promptText="Nhập mật khẩu"
-                               styleClass="password-field" maxWidth="Infinity"
+                <HBox fx:id="passwordWrapper" styleClass="password-wrapper" alignment="CENTER_LEFT">
+                    <PasswordField fx:id="passwordField" promptText="Nhập mật khẩu"
+                                   styleClass="password-field-inner" HBox.hgrow="ALWAYS"
+                                   onAction="#handleLogin"/>
+                    <TextField fx:id="passwordVisible" promptText="Nhập mật khẩu"
+                               styleClass="password-field-inner" HBox.hgrow="ALWAYS"
+                               visible="false" managed="false"
                                onAction="#handleLogin"/>
+                    <Button fx:id="togglePasswordBtn" styleClass="password-toggle-btn"
+                            onAction="#togglePassword"/>
+                </HBox>
             </VBox>
 
             <Region minHeight="28"/>

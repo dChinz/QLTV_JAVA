@@ -6,34 +6,50 @@
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.controller.BorrowController"
-      spacing="16" styleClass="content-area">
+      spacing="12" styleClass="content-area">
 
-    <!-- Toolbar -->
+    <!-- Toolbar row 1: keyword + status + actions -->
     <HBox spacing="12" alignment="CENTER_LEFT">
         <TextField fx:id="searchField" promptText="Tìm theo tên đọc giả, tên sách..."
-                   styleClass="search-field" HBox.hgrow="ALWAYS" onAction="#handleSearch"/>
-        <ComboBox fx:id="statusFilter" promptText="Tất cả trạng thái" prefWidth="180"
-                  onAction="#handleSearch"/>
-        <Button text="Tìm kiếm" styleClass="btn-primary" onAction="#handleSearch"/>
+                   styleClass="search-field" HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="statusFilter" promptText="Tất cả trạng thái" prefWidth="180"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button text="Mượn sách mới" styleClass="btn-success" onAction="#handleNewBorrow"/>
         <Button text="Đồng bộ quá hạn" styleClass="btn-warning" onAction="#handleSyncOverdue"/>
     </HBox>
 
+    <!-- Toolbar row 2: date range -->
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <Label text="Từ ngày:" style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+        <DatePicker fx:id="fromDatePicker" prefWidth="130"/>
+        <Label text="Đến ngày:" style="-fx-font-size:12px; -fx-text-fill:#64748B;"/>
+        <DatePicker fx:id="toDatePicker" prefWidth="130"/>
+        <Button text="Xóa bộ lọc" styleClass="btn-outline" onAction="#clearDateFilter"
+                style="-fx-font-size:11px; -fx-padding:5 12 5 12;"/>
+    </HBox>
+
     <!-- Table -->
-    <TableView fx:id="borrowTable" VBox.vgrow="ALWAYS">
+    <TableView fx:id="borrowTable" VBox.vgrow="ALWAYS" styleClass="borrow-table">
         <columns>
-            <TableColumn fx:id="colId"         text="ID"            prefWidth="50"/>
-            <TableColumn fx:id="colMember"     text="Đọc giả"       prefWidth="180"/>
-            <TableColumn fx:id="colBook"       text="Sách"          prefWidth="220"/>
-            <TableColumn fx:id="colBorrowDate" text="Ngày mượn"     prefWidth="100"/>
-            <TableColumn fx:id="colDueDate"    text="Hạn trả"       prefWidth="100"/>
-            <TableColumn fx:id="colReturnDate" text="Ngày trả"      prefWidth="100"/>
-            <TableColumn fx:id="colStatus"     text="Trạng thái"    prefWidth="110"/>
-            <TableColumn fx:id="colActions"    text="Thao tác"      prefWidth="180"/>
+            <TableColumn fx:id="colSTT"        text="STT"          prefWidth="50"/>
+            <TableColumn fx:id="colMember"     text="Đọc giả"       prefWidth="170"/>
+            <TableColumn fx:id="colBook"       text="Sách"          prefWidth="200"/>
+            <TableColumn fx:id="colBorrowDate" text="Ngày mượn"     prefWidth="95"/>
+            <TableColumn fx:id="colDueDate"    text="Hạn trả"       prefWidth="95"/>
+            <TableColumn fx:id="colReturnDate" text="Ngày trả"      prefWidth="95"/>
+            <TableColumn fx:id="colStatus"     text="Trạng thái"    prefWidth="160"/>
+            <TableColumn fx:id="colNote"       text="Ghi chú"       prefWidth="120"/>
+            <TableColumn fx:id="colActions"    text="Thao tác"      prefWidth="160"/>
         </columns>
         <placeholder><Label text="Không có phiếu mượn nào"/></placeholder>
     </TableView>
 
-    <Label fx:id="statusLabel" text="" style="-fx-text-fill: #64748B; -fx-font-size: 12px;"/>
+    <!-- Pagination -->
+    <HBox alignment="CENTER_LEFT" spacing="8">
+        <Label fx:id="statusLabel" text="" style="-fx-text-fill:#64748B; -fx-font-size:12px;" HBox.hgrow="ALWAYS"/>
+        <Button fx:id="prevPageBtn" text="← Trước" styleClass="btn-outline" onAction="#prevPage"/>
+        <Label fx:id="pageInfoLabel" text="Trang 1 / 1" style="-fx-font-size:12px;"/>
+        <Button fx:id="nextPageBtn" text="Sau →" styleClass="btn-outline" onAction="#nextPage"/>
+    </HBox>
+
 </VBox>

@@ -1,22 +1,33 @@
 package com.example.controller;
 
 import com.example.dao.CategoryDAO;
+import com.example.model.Book;
 import com.example.model.Category;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
+import org.kordamp.ikonli.javafx.FontIcon;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CategoryController {
 
     @FXML private TextField  searchField;
     @FXML private TableView<Category> categoryTable;
-    @FXML private TableColumn<Category, String> colId;
+    @FXML private TableColumn<Category, Void>   colSelect;
+    @FXML private TableColumn<Category, Void>   colSTT;
     @FXML private TableColumn<Category, String> colName;
     @FXML private TableColumn<Category, String> colBooks;
     @FXML private TableColumn<Category, String> colDesc;
+    @FXML private TableColumn<Category, Void>   colCatActions;
     @FXML private Label      statusLabel;
 
     @FXML private Label      formTitle;
@@ -28,15 +39,71 @@ public class CategoryController {
 
     private final CategoryDAO categoryDAO = new CategoryDAO();
     private Category selectedCategory;
+    private final Map<Integer, BooleanProperty> selectedMap = new HashMap<>();
 
     @FXML
     public void initialize() {
-        colId.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getId())));
+        setupColumns();
+        searchField.textProperty().addListener((obs, o, n) -> handleSearch());
+        loadCategories();
+    }
+
+    private void setupColumns() {
+        colSelect.setCellFactory(col -> new TableCell<>() {
+            private final CheckBox cb = new CheckBox();
+            {
+                cb.setOnAction(e -> {
+                    int idx = getIndex();
+                    if (idx >= 0 && idx < getTableView().getItems().size()) {
+                        Category c = getTableView().getItems().get(idx);
+                        selectedMap.computeIfAbsent(c.getId(), k -> new SimpleBooleanProperty(false))
+                                   .set(cb.isSelected());
+                    }
+                });
+            }
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setGraphic(null); return; }
+                Category c = getTableView().getItems().get(getIndex());
+                BooleanProperty prop = selectedMap.computeIfAbsent(
+                    c.getId(), k -> new SimpleBooleanProperty(false));
+                cb.setSelected(prop.get());
+                setGraphic(cb);
+            }
+        });
+
+        colSTT.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
+            }
+        });
+
         colName.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getName()));
         colBooks.setCellValueFactory(c -> new SimpleStringProperty(
             String.valueOf(categoryDAO.countBooksInCategory(c.getValue().getId()))));
-        colDesc.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getDescription()));
-        loadCategories();
+        colDesc.setCellValueFactory(c -> new SimpleStringProperty(
+            c.getValue().getDescription() != null ? c.getValue().getDescription() : ""));
+
+        colCatActions.setCellFactory(col -> new TableCell<>() {
+            private final Button eyeBtn = new Button("Xem sách");
+            {
+                FontIcon icon = new FontIcon("fas-book-open");
+                icon.setIconSize(12);
+                eyeBtn.setGraphic(icon);
+                eyeBtn.setStyle("-fx-font-size:11px; -fx-padding:4 8 4 8;");
+                eyeBtn.getStyleClass().add("btn-outline");
+                eyeBtn.setOnAction(e -> {
+                    int idx = getIndex();
+                    if (idx >= 0 && idx < getTableView().getItems().size())
+                        handleViewBooks(getTableView().getItems().get(idx));
+                });
+            }
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : eyeBtn);
+            }
+        });
     }
 
     @FXML
@@ -44,7 +111,7 @@ public class CategoryController {
         String kw = searchField.getText().trim();
         List<Category> list = kw.isEmpty() ? categoryDAO.findAll() : categoryDAO.search(kw);
         categoryTable.setItems(FXCollections.observableArrayList(list));
-        statusLabel.setText("Tìm thấy " + list.size() + " danh mục");
+        statusLabel.setText(list.size() + " danh mục");
     }
 
     @FXML
@@ -91,20 +158,99 @@ public class CategoryController {
         if (selectedCategory == null) return;
         long bookCount = categoryDAO.countBooksInCategory(selectedCategory.getId());
         if (bookCount > 0) {
-            setMessage("Không thể xóa: danh mục có " + bookCount + " sách.", true);
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Xóa danh mục");
+            alert.setHeaderText("Danh mục \"" + selectedCategory.getName() + "\" có " + bookCount + " sách.");
+            alert.setContentText("Xóa danh mục và toàn bộ sách trong danh mục?");
+            ButtonType deleteWithBooks = new ButtonType("Xóa cả " + bookCount + " sách",
+                                                        ButtonBar.ButtonData.YES);
+            ButtonType cancelType     = new ButtonType("Hủy", ButtonBar.ButtonData.CANCEL_CLOSE);
+            alert.getButtonTypes().setAll(deleteWithBooks, cancelType);
+            alert.showAndWait().ifPresent(t -> {
+                if (t == deleteWithBooks) {
+                    categoryDAO.deleteWithBooks(selectedCategory.getId());
+                    setMessage("Đã xóa danh mục và " + bookCount + " sách.", false);
+                    handleClear();
+                    loadCategories();
+                }
+            });
+        } else {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Xóa danh mục \"" + selectedCategory.getName() + "\"?",
+                ButtonType.YES, ButtonType.NO);
+            confirm.setHeaderText(null);
+            confirm.showAndWait().ifPresent(t -> {
+                if (t == ButtonType.YES) {
+                    categoryDAO.delete(selectedCategory.getId());
+                    setMessage("Đã xóa danh mục.", false);
+                    handleClear();
+                    loadCategories();
+                }
+            });
+        }
+    }
+
+    @FXML
+    private void handleBulkDelete() {
+        List<Integer> toDelete = selectedMap.entrySet().stream()
+            .filter(e -> e.getValue().get())
+            .map(Map.Entry::getKey)
+            .toList();
+        if (toDelete.isEmpty()) {
+            setMessage("Chưa chọn danh mục nào để xóa.", true);
             return;
         }
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-            "Xóa danh mục \"" + selectedCategory.getName() + "\"?", ButtonType.YES, ButtonType.NO);
-        confirm.setHeaderText(null);
+            "Xóa " + toDelete.size() + " danh mục đã chọn?\n" +
+            "Các danh mục có sách sẽ không bị xóa.",
+            ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText("Xóa hàng loạt");
         confirm.showAndWait().ifPresent(t -> {
             if (t == ButtonType.YES) {
-                categoryDAO.delete(selectedCategory.getId());
-                setMessage("Đã xóa danh mục.", false);
-                handleClear();
+                List<Integer> safeToDelete = toDelete.stream()
+                    .filter(id -> categoryDAO.countBooksInCategory(id) == 0)
+                    .toList();
+                int skipped = toDelete.size() - safeToDelete.size();
+                if (!safeToDelete.isEmpty()) categoryDAO.deleteMultiple(safeToDelete);
+                selectedMap.clear();
                 loadCategories();
+                String msg = "Đã xóa " + safeToDelete.size() + " danh mục.";
+                if (skipped > 0) msg += " Bỏ qua " + skipped + " danh mục có sách.";
+                setMessage(msg, skipped > 0);
             }
         });
+    }
+
+    private void handleViewBooks(Category category) {
+        List<Book> books = categoryDAO.findBooksByCategory(category.getId());
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Sách trong danh mục: " + category.getName());
+        dialog.setHeaderText(null);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        if (books.isEmpty()) {
+            dialog.getDialogPane().setContent(new Label("Danh mục này chưa có sách nào."));
+        } else {
+            TableView<Book> bt = new TableView<>();
+            TableColumn<Book, String> tcIsbn   = new TableColumn<>("ISBN");
+            TableColumn<Book, String> tcTitle  = new TableColumn<>("Tên sách");
+            TableColumn<Book, String> tcAuthor = new TableColumn<>("Tác giả");
+            TableColumn<Book, String> tcTotal  = new TableColumn<>("Tổng SL");
+            TableColumn<Book, String> tcAvail  = new TableColumn<>("Còn lại");
+            tcIsbn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getIsbn()));
+            tcTitle.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getTitle()));
+            tcAuthor.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getAuthor()));
+            tcTotal.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getTotalCopies())));
+            tcAvail.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getAvailableCopies())));
+            tcIsbn.setPrefWidth(110); tcTitle.setPrefWidth(240); tcAuthor.setPrefWidth(150);
+            tcTotal.setPrefWidth(70); tcAvail.setPrefWidth(70);
+            bt.getColumns().addAll(tcIsbn, tcTitle, tcAuthor, tcTotal, tcAvail);
+            bt.setItems(FXCollections.observableArrayList(books));
+            bt.setPrefWidth(660); bt.setPrefHeight(340);
+            VBox content = new VBox(8, new Label("Tổng: " + books.size() + " sách"), bt);
+            content.setPadding(new Insets(16));
+            dialog.getDialogPane().setContent(content);
+        }
+        dialog.showAndWait();
     }
 
     @FXML
@@ -116,13 +262,14 @@ public class CategoryController {
         saveButton.setText("Lưu");
         deleteButton.setVisible(false);
         deleteButton.setManaged(false);
+        formMessage.setText("");
         categoryTable.getSelectionModel().clearSelection();
     }
 
     private void loadCategories() {
         List<Category> list = categoryDAO.findAll();
         categoryTable.setItems(FXCollections.observableArrayList(list));
-        statusLabel.setText("Tổng cộng " + list.size() + " danh mục");
+        statusLabel.setText(list.size() + " danh mục");
     }
 
     private void setMessage(String msg, boolean isError) {

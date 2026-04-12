@@ -107,4 +107,53 @@ public class CategoryDAO {
         }
         return 0;
     }
+
+    /** Soft-delete all books belonging to a category, then delete the category itself. */
+    public void deleteWithBooks(int categoryId) {
+        String sqlBooks = "UPDATE books SET deleted=TRUE WHERE category_id=?";
+        String sqlCat   = "DELETE FROM categories WHERE id=?";
+        try (PreparedStatement ps1 = getConn().prepareStatement(sqlBooks);
+             PreparedStatement ps2 = getConn().prepareStatement(sqlCat)) {
+            ps1.setInt(1, categoryId); ps1.executeUpdate();
+            ps2.setInt(1, categoryId); ps2.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting category with books", e);
+        }
+    }
+
+    public List<com.example.model.Book> findBooksByCategory(int categoryId) {
+        List<com.example.model.Book> list = new ArrayList<>();
+        String sql = "SELECT id, title, author, isbn, total_copies, available_copies FROM books WHERE category_id=? AND deleted=FALSE ORDER BY title";
+        try (PreparedStatement ps = getConn().prepareStatement(sql)) {
+            ps.setInt(1, categoryId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                com.example.model.Book b = new com.example.model.Book();
+                b.setId(rs.getInt("id"));
+                b.setTitle(rs.getString("title"));
+                b.setAuthor(rs.getString("author"));
+                b.setIsbn(rs.getString("isbn"));
+                b.setTotalCopies(rs.getInt("total_copies"));
+                b.setAvailableCopies(rs.getInt("available_copies"));
+                list.add(b);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching books by category", e);
+        }
+        return list;
+    }
+
+    public void deleteMultiple(List<Integer> ids) {
+        if (ids.isEmpty()) return;
+        String sql = "DELETE FROM categories WHERE id=?";
+        try (PreparedStatement ps = getConn().prepareStatement(sql)) {
+            for (int id : ids) {
+                ps.setInt(1, id);
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting categories", e);
+        }
+    }
 }

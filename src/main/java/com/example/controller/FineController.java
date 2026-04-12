@@ -9,6 +9,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
@@ -17,10 +18,12 @@ public class FineController {
     @FXML private Label totalUnpaidLabel;
     @FXML private Label unpaidCountLabel;
 
-    @FXML private TextField searchField;
+    @FXML private TextField    searchField;
     @FXML private ComboBox<String> paidFilter;
+    @FXML private DatePicker   fromDatePicker;
+    @FXML private DatePicker   toDatePicker;
     @FXML private TableView<Fine> fineTable;
-    @FXML private TableColumn<Fine, String> colId;
+    @FXML private TableColumn<Fine, Void>   colSTT;
     @FXML private TableColumn<Fine, String> colMember;
     @FXML private TableColumn<Fine, String> colBook;
     @FXML private TableColumn<Fine, String> colDueDate;
@@ -29,7 +32,15 @@ public class FineController {
     @FXML private TableColumn<Fine, String> colReason;
     @FXML private TableColumn<Fine, String> colPaid;
     @FXML private TableColumn<Fine, Void>   colActions;
-    @FXML private Label statusLabel;
+    @FXML private Label  statusLabel;
+    @FXML private Button prevPageBtn;
+    @FXML private Button nextPageBtn;
+    @FXML private Label  pageInfoLabel;
+
+    private static final int PAGE_SIZE  = 20;
+    private int           currentPage   = 0;
+    private List<Fine>    masterList    = new java.util.ArrayList<>();
+    private List<Fine>    filteredList  = new java.util.ArrayList<>();
 
     private final FineDAO fineDAO = new FineDAO();
     private final NumberFormat currencyFormat = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
@@ -39,12 +50,21 @@ public class FineController {
         paidFilter.setItems(FXCollections.observableArrayList("Tất cả", "Chưa thanh toán", "Đã thanh toán"));
         paidFilter.setValue("Tất cả");
         setupColumns();
+        searchField.textProperty().addListener((obs, o, n) -> applyFilter());
+        paidFilter.valueProperty().addListener((obs, o, n) -> applyFilter());
+        fromDatePicker.valueProperty().addListener((obs, o, n) -> applyFilter());
+        toDatePicker.valueProperty().addListener((obs, o, n) -> applyFilter());
         loadFines();
         updateSummary();
     }
 
     private void setupColumns() {
-        colId.setCellValueFactory(c -> new SimpleStringProperty(String.valueOf(c.getValue().getId())));
+        colSTT.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(currentPage * PAGE_SIZE + getIndex() + 1));
+            }
+        });
         colMember.setCellValueFactory(c -> new SimpleStringProperty(
             c.getValue().getMemberCode() + " - " + c.getValue().getMemberName()));
         colBook.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getBookTitle()));
@@ -83,18 +103,53 @@ public class FineController {
     }
 
     @FXML
-    private void handleSearch() {
-        String kw = searchField.getText().trim();
-        String filterVal = paidFilter.getValue();
-        List<Fine> list = kw.isEmpty() ? fineDAO.findAll() : fineDAO.search(kw);
-        if ("Chưa thanh toán".equals(filterVal)) {
-            list = list.stream().filter(f -> !f.isPaid()).toList();
-        } else if ("Đã thanh toán".equals(filterVal)) {
-            list = list.stream().filter(Fine::isPaid).toList();
-        }
-        fineTable.setItems(FXCollections.observableArrayList(list));
-        statusLabel.setText("Tìm thấy " + list.size() + " phiếu phạt");
+    private void handleSearch() { applyFilter(); }
+
+    @FXML
+    private void clearDateFilter() {
+        fromDatePicker.setValue(null);
+        toDatePicker.setValue(null);
     }
+
+    private void applyFilter() {
+        String kw      = searchField.getText().toLowerCase().trim();
+        String paid    = paidFilter.getValue();
+        LocalDate from = fromDatePicker.getValue();
+        LocalDate to   = toDatePicker.getValue();
+        filteredList = masterList.stream()
+            .filter(f -> {
+                boolean paidOk = "Tất cả".equals(paid)
+                    || ("Chưa thanh toán".equals(paid) && !f.isPaid())
+                    || ("Đã thanh toán".equals(paid) && f.isPaid());
+                boolean kwOk = kw.isEmpty()
+                    || f.getMemberName().toLowerCase().contains(kw)
+                    || f.getBookTitle().toLowerCase().contains(kw)
+                    || f.getMemberCode().toLowerCase().contains(kw);
+                boolean dateOk = true;
+                if (from != null && f.getDueDate() != null) dateOk = !f.getDueDate().isBefore(from);
+                if (to   != null && f.getDueDate() != null) dateOk = dateOk && !f.getDueDate().isAfter(to);
+                return paidOk && kwOk && dateOk;
+            })
+            .toList();
+        currentPage = 0;
+        showPage();
+    }
+
+    private void showPage() {
+        int from = currentPage * PAGE_SIZE;
+        int to   = Math.min(from + PAGE_SIZE, filteredList.size());
+        fineTable.setItems(FXCollections.observableArrayList(
+            from < filteredList.size() ? filteredList.subList(from, to) : List.of()));
+        int totalPages = Math.max(1, (int) Math.ceil((double) filteredList.size() / PAGE_SIZE));
+        pageInfoLabel.setText("Trang " + (currentPage + 1) + " / " + totalPages);
+        statusLabel.setText(filteredList.size() + " phiếu phạt");
+        prevPageBtn.setDisable(currentPage == 0);
+        nextPageBtn.setDisable((currentPage + 1) * PAGE_SIZE >= filteredList.size());
+        fineTable.refresh();
+    }
+
+    @FXML private void prevPage() { if (currentPage > 0) { currentPage--; showPage(); } }
+    @FXML private void nextPage() { if ((currentPage + 1) * PAGE_SIZE < filteredList.size()) { currentPage++; showPage(); } }
 
     private void handleMarkPaid(Fine fine) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
@@ -113,9 +168,8 @@ public class FineController {
     }
 
     private void loadFines() {
-        List<Fine> list = fineDAO.findAll();
-        fineTable.setItems(FXCollections.observableArrayList(list));
-        statusLabel.setText("Tổng cộng " + list.size() + " phiếu phạt");
+        masterList = fineDAO.findAll();
+        applyFilter();
     }
 
     private void updateSummary() {

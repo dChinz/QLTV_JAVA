@@ -142,6 +142,20 @@ public class FineDAO {
         }
     }
 
+    public List<Fine> findByDateRange(java.time.LocalDate from, java.time.LocalDate to) {
+        List<Fine> list = new ArrayList<>();
+        String sql = JOIN_SQL + " WHERE br.borrow_date BETWEEN ? AND ? ORDER BY f.created_at DESC";
+        try (PreparedStatement ps = getConn().prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(from));
+            ps.setDate(2, Date.valueOf(to));
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(mapRow(rs));
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching fines by date range", e);
+        }
+        return list;
+    }
+
     public BigDecimal totalUnpaidAmount() {
         String sql = "SELECT COALESCE(SUM(amount), 0) FROM fines WHERE paid = FALSE";
         try (Statement st = getConn().createStatement();
