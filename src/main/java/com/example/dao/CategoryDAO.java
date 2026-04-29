@@ -63,7 +63,7 @@ public class CategoryDAO {
 
     public void save(Category category) {
         String sql = "INSERT INTO categories (name, description) VALUES (?, ?)";
-        try (PreparedStatement ps = getConn().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = getConn().prepareStatement(sql, new String[]{"id"})) {
             ps.setString(1, category.getName());
             ps.setString(2, category.getDescription());
             ps.executeUpdate();
@@ -97,7 +97,7 @@ public class CategoryDAO {
     }
 
     public long countBooksInCategory(int categoryId) {
-        String sql = "SELECT COUNT(*) FROM books WHERE category_id=? AND deleted = FALSE";
+        String sql = "SELECT COUNT(*) FROM books WHERE category_id=? AND deleted = 0";
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, categoryId);
             ResultSet rs = ps.executeQuery();
@@ -108,10 +108,10 @@ public class CategoryDAO {
         return 0;
     }
 
-    /** Soft-delete all books belonging to a category, then delete the category itself. */
+    // TRUE -> 1
     public void deleteWithBooks(int categoryId) {
-        String sqlBooks = "UPDATE books SET deleted=TRUE WHERE category_id=?";
-        String sqlCat   = "DELETE FROM categories WHERE id=?";
+        String sqlBooks = "UPDATE books SET deleted = 1 WHERE category_id = ?";
+        String sqlCat   = "DELETE FROM categories WHERE id = ?";
         try (PreparedStatement ps1 = getConn().prepareStatement(sqlBooks);
              PreparedStatement ps2 = getConn().prepareStatement(sqlCat)) {
             ps1.setInt(1, categoryId); ps1.executeUpdate();
@@ -121,9 +121,10 @@ public class CategoryDAO {
         }
     }
 
+    // FALSE -> 0
     public List<com.example.model.Book> findBooksByCategory(int categoryId) {
         List<com.example.model.Book> list = new ArrayList<>();
-        String sql = "SELECT id, title, author, isbn, total_copies, available_copies FROM books WHERE category_id=? AND deleted=FALSE ORDER BY title";
+        String sql = "SELECT id, title, author, isbn, total_copies, available_copies FROM books WHERE category_id=? AND deleted = 0 ORDER BY title";
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, categoryId);
             ResultSet rs = ps.executeQuery();

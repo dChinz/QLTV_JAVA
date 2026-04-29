@@ -21,7 +21,8 @@ public class FineDAO {
         f.setBorrowRecordId(rs.getInt("borrow_record_id"));
         f.setAmount(rs.getBigDecimal("amount"));
         f.setReason(rs.getString("reason"));
-        f.setPaid(rs.getBoolean("paid"));
+        // paid là NUMBER(1) trong Oracle -> đọc bằng getInt
+        f.setPaid(rs.getInt("paid") == 1);
         Date pd = rs.getDate("paid_date");
         if (pd != null) f.setPaidDate(pd.toLocalDate());
         try { f.setMemberName(rs.getString("member_name")); } catch (SQLException ignored) {}
@@ -64,9 +65,10 @@ public class FineDAO {
         return list;
     }
 
+    // paid = 0 thay vì FALSE
     public List<Fine> findUnpaid() {
         List<Fine> list = new ArrayList<>();
-        String sql = JOIN_SQL + " WHERE f.paid = FALSE ORDER BY f.created_at DESC";
+        String sql = JOIN_SQL + " WHERE f.paid = 0 ORDER BY f.created_at DESC";
         try (Statement st = getConn().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) list.add(mapRow(rs));
@@ -104,11 +106,12 @@ public class FineDAO {
 
     public void save(Fine fine) {
         String sql = "INSERT INTO fines (borrow_record_id, amount, reason, paid) VALUES (?,?,?,?)";
-        try (PreparedStatement ps = getConn().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = getConn().prepareStatement(sql, new String[]{"id"})) {
             ps.setInt(1, fine.getBorrowRecordId());
             ps.setBigDecimal(2, fine.getAmount());
             ps.setString(3, fine.getReason());
-            ps.setBoolean(4, fine.isPaid());
+            // boolean -> int cho Oracle
+            ps.setInt(4, fine.isPaid() ? 1 : 0);
             ps.executeUpdate();
             ResultSet keys = ps.getGeneratedKeys();
             if (keys.next()) fine.setId(keys.getInt(1));
@@ -117,8 +120,9 @@ public class FineDAO {
         }
     }
 
+    // TRUE -> 1, CURDATE() -> TRUNC(SYSDATE)
     public void markAsPaid(int fineId) {
-        String sql = "UPDATE fines SET paid=TRUE, paid_date=CURDATE() WHERE id=?";
+        String sql = "UPDATE fines SET paid = 1, paid_date = TRUNC(SYSDATE) WHERE id = ?";
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, fineId);
             ps.executeUpdate();
@@ -132,7 +136,7 @@ public class FineDAO {
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setBigDecimal(1, fine.getAmount());
             ps.setString(2, fine.getReason());
-            ps.setBoolean(3, fine.isPaid());
+            ps.setInt(3, fine.isPaid() ? 1 : 0);
             if (fine.getPaidDate() != null) ps.setDate(4, Date.valueOf(fine.getPaidDate()));
             else ps.setNull(4, Types.DATE);
             ps.setInt(5, fine.getId());
@@ -156,8 +160,9 @@ public class FineDAO {
         return list;
     }
 
+    // COALESCE -> NVL
     public BigDecimal totalUnpaidAmount() {
-        String sql = "SELECT COALESCE(SUM(amount), 0) FROM fines WHERE paid = FALSE";
+        String sql = "SELECT NVL(SUM(amount), 0) FROM fines WHERE paid = 0";
         try (Statement st = getConn().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             if (rs.next()) return rs.getBigDecimal(1);

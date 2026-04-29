@@ -38,10 +38,10 @@ public class BorrowRecordDAO {
 
     private static final String JOIN_SQL = """
         SELECT br.*,
-               m.full_name  AS member_name,
+               m.full_name   AS member_name,
                m.member_code AS member_code,
-               b.title      AS book_title,
-               b.author     AS book_author
+               b.title       AS book_title,
+               b.author      AS book_author
         FROM borrow_records br
         JOIN members m ON br.member_id = m.id
         JOIN books   b ON br.book_id   = b.id
@@ -96,9 +96,10 @@ public class BorrowRecordDAO {
         return list;
     }
 
+    // CURDATE() -> TRUNC(SYSDATE)
     public List<BorrowRecord> findOverdue() {
         List<BorrowRecord> list = new ArrayList<>();
-        String sql = JOIN_SQL + " WHERE br.status = 'OVERDUE' OR (br.status = 'BORROWING' AND br.due_date < CURDATE()) ORDER BY br.due_date";
+        String sql = JOIN_SQL + " WHERE br.status = 'OVERDUE' OR (br.status = 'BORROWING' AND br.due_date < TRUNC(SYSDATE)) ORDER BY br.due_date";
         try (Statement st = getConn().createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) list.add(mapRow(rs));
@@ -124,7 +125,7 @@ public class BorrowRecordDAO {
 
     public void save(BorrowRecord record) {
         String sql = "INSERT INTO borrow_records (member_id, book_id, borrow_date, due_date, status, notes) VALUES (?,?,?,?,?,?)";
-        try (PreparedStatement ps = getConn().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = getConn().prepareStatement(sql, new String[]{"id"})) {
             ps.setInt(1, record.getMemberId());
             ps.setInt(2, record.getBookId());
             ps.setDate(3, Date.valueOf(record.getBorrowDate()));
@@ -155,9 +156,9 @@ public class BorrowRecordDAO {
         }
     }
 
-    /** Mark all BORROWING records past due_date as OVERDUE */
+    // CURDATE() -> TRUNC(SYSDATE)
     public int markOverdueRecords() {
-        String sql = "UPDATE borrow_records SET status='OVERDUE' WHERE status='BORROWING' AND due_date < CURDATE()";
+        String sql = "UPDATE borrow_records SET status='OVERDUE' WHERE status='BORROWING' AND due_date < TRUNC(SYSDATE)";
         try (Statement st = getConn().createStatement()) {
             return st.executeUpdate(sql);
         } catch (SQLException e) {
@@ -175,9 +176,10 @@ public class BorrowRecordDAO {
         return 0;
     }
 
+    // CURDATE() -> TRUNC(SYSDATE)
     public long countOverdue() {
         try (Statement st = getConn().createStatement();
-             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM borrow_records WHERE status='OVERDUE' OR (status='BORROWING' AND due_date < CURDATE())")) {
+             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM borrow_records WHERE status='OVERDUE' OR (status='BORROWING' AND due_date < TRUNC(SYSDATE))")) {
             if (rs.next()) return rs.getLong(1);
         } catch (SQLException e) {
             throw new RuntimeException("Error counting overdue", e);

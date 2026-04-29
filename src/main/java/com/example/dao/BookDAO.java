@@ -28,7 +28,7 @@ public class BookDAO {
         b.setAvailableCopies(rs.getInt("available_copies"));
         b.setDescription(rs.getString("description"));
         b.setCoverImagePath(rs.getString("cover_image_path"));
-        try { b.setDeleted(rs.getBoolean("deleted")); } catch (SQLException ignored) { b.setDeleted(false); }
+        try { b.setDeleted(rs.getInt("deleted") == 1); } catch (SQLException ignored) { b.setDeleted(false); }
         try { b.setCategoryName(rs.getString("category_name")); } catch (SQLException ignored) {}
         Timestamp ts = rs.getTimestamp("created_at");
         if (ts != null) b.setCreatedAt(ts.toLocalDateTime());
@@ -40,7 +40,7 @@ public class BookDAO {
         String sql = """
             SELECT b.*, c.name AS category_name
             FROM books b LEFT JOIN categories c ON b.category_id = c.id
-            WHERE b.deleted = FALSE
+            WHERE b.deleted = 0
             ORDER BY b.title
             """;
         try (Statement st = getConn().createStatement();
@@ -56,7 +56,7 @@ public class BookDAO {
         String sql = """
             SELECT b.*, c.name AS category_name
             FROM books b LEFT JOIN categories c ON b.category_id = c.id
-            WHERE b.id = ? AND b.deleted = FALSE
+            WHERE b.id = ? AND b.deleted = 0
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -73,7 +73,7 @@ public class BookDAO {
         String sql = """
             SELECT b.*, c.name AS category_name
             FROM books b LEFT JOIN categories c ON b.category_id = c.id
-            WHERE b.deleted = FALSE AND (b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)
+            WHERE b.deleted = 0 AND (b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)
             ORDER BY b.title
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
@@ -94,7 +94,7 @@ public class BookDAO {
         String sql = """
             SELECT b.*, c.name AS category_name
             FROM books b LEFT JOIN categories c ON b.category_id = c.id
-            WHERE b.category_id = ? AND b.deleted = FALSE
+            WHERE b.category_id = ? AND b.deleted = 0
             ORDER BY b.title
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
@@ -113,7 +113,7 @@ public class BookDAO {
                 category_id, total_copies, available_copies, description, cover_image_path)
             VALUES (?,?,?,?,?,?,?,?,?,?)
             """;
-        try (PreparedStatement ps = getConn().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = getConn().prepareStatement(sql, new String[]{"id"})) {
             ps.setString(1, book.getIsbn());
             ps.setString(2, book.getTitle());
             ps.setString(3, book.getAuthor());
@@ -137,7 +137,7 @@ public class BookDAO {
         String sql = """
             UPDATE books SET isbn=?, title=?, author=?, publisher=?, publish_year=?,
                 category_id=?, total_copies=?, available_copies=?, description=?, cover_image_path=?
-            WHERE id=? AND deleted = FALSE
+            WHERE id=? AND deleted = 0
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setString(1, book.getIsbn());
@@ -152,15 +152,16 @@ public class BookDAO {
             ps.setString(9, book.getDescription());
             ps.setString(10, book.getCoverImagePath());
             ps.setInt(11, book.getId());
-            ps.executeUpdate();
+            int rows = ps.executeUpdate();
+System.out.println("Rows updated = " + rows);
         } catch (SQLException e) {
             throw new RuntimeException("Error updating book", e);
         }
     }
 
-    /** Soft delete: ẩn sách khỏi danh sách, giữ FK phiếu mượn. */
+    // TRUE -> 1
     public void softDelete(int id) {
-        String sql = "UPDATE books SET deleted = TRUE WHERE id = ? AND deleted = FALSE";
+        String sql = "UPDATE books SET deleted = 1 WHERE id = ? AND deleted = 0";
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
@@ -180,7 +181,6 @@ public class BookDAO {
         }
     }
 
-    /** Decrease total_copies by 1 when a book is permanently lost. */
     public void decreaseTotalCopies(int bookId) {
         String sql = "UPDATE books SET total_copies = total_copies - 1 WHERE id = ? AND total_copies > 0";
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
@@ -193,7 +193,7 @@ public class BookDAO {
 
     public long countTotal() {
         try (Statement st = getConn().createStatement();
-             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM books WHERE deleted = FALSE")) {
+             ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM books WHERE deleted = 0")) {
             if (rs.next()) return rs.getLong(1);
         } catch (SQLException e) {
             throw new RuntimeException("Error counting books", e);

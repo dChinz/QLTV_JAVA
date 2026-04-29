@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import javafx.stage.Popup;
 
 public class BorrowController {
 
@@ -220,124 +221,203 @@ public class BorrowController {
     }
 
     // ── New Borrow ─────────────────────────────────────────────────────────
-
     @FXML
-    private void handleNewBorrow() {
-        List<Member> allMembers = memberDAO.findAll().stream()
-            .filter(m -> m.getStatus() == Member.Status.ACTIVE)
-            .sorted(java.util.Comparator.comparing(Member::getFullName))
+private void handleNewBorrow() {
+    List<Member> allMembers = memberDAO.findAll().stream()
+        .filter(m -> m.getStatus() == Member.Status.ACTIVE)
+        .sorted(java.util.Comparator.comparing(Member::getFullName))
+        .toList();
+    List<Book> allBooks = bookDAO.findAll().stream()
+        .filter(Book::isAvailable)
+        .sorted(java.util.Comparator.comparing(Book::getTitle))
+        .toList();
+
+    Dialog<int[]> dialog = new Dialog<>();
+    dialog.setTitle("Mượn sách mới");
+    dialog.setHeaderText(null);
+
+    ButtonType borrowType = new ButtonType("Xác nhận mượn", ButtonBar.ButtonData.OK_DONE);
+    dialog.getDialogPane().getButtonTypes().addAll(borrowType, ButtonType.CANCEL);
+
+    GridPane grid = new GridPane();
+    grid.setHgap(12); grid.setVgap(12);
+    grid.setPadding(new Insets(20));
+
+    Label formError = new Label();
+    formError.setVisible(false); formError.setManaged(false);
+    formError.setWrapText(true); formError.setMaxWidth(340);
+    formError.setStyle("-fx-text-fill: #E11D48; -fx-font-size: 12px;");
+
+    final Member[] selectedMember = {null};
+    final Book[]   selectedBook   = {null};
+
+    // ── Helper: tạo autocomplete field ───────────────────────────────────
+    // Dùng TextField + Popup + ListView, hoàn toàn tách biệt nhau
+    TextField memberField = new TextField();
+    memberField.setPromptText("Tìm theo tên hoặc mã...");
+    memberField.setPrefWidth(300);
+
+    TextField bookField = new TextField();
+    bookField.setPromptText("Tìm theo tên, ISBN hoặc tác giả...");
+    bookField.setPrefWidth(300);
+
+    // ── Member popup ──────────────────────────────────────────────────────
+    ListView<Member> memberListView = new ListView<>();
+    memberListView.setPrefHeight(180);
+    memberListView.setPrefWidth(300);
+    memberListView.setCellFactory(lv -> new ListCell<>() {
+        @Override protected void updateItem(Member m, boolean empty) {
+            super.updateItem(m, empty);
+            setText(empty || m == null ? null : m.getMemberCode() + " – " + m.getFullName());
+        }
+    });
+
+    Popup memberPopup = new Popup();
+    memberPopup.setAutoHide(true);
+    memberPopup.getContent().add(memberListView);
+    memberListView.setStyle("-fx-border-color: #ccc; -fx-background-color: white;");
+
+    memberField.textProperty().addListener((obs, old, val) -> {
+        // Nếu text đang là text của item đã chọn → không làm gì
+        if (selectedMember[0] != null) {
+            String display = selectedMember[0].getMemberCode() + " – " + selectedMember[0].getFullName();
+            if (display.equals(val)) return;
+            // Người dùng bắt đầu gõ lại → clear selection
+            selectedMember[0] = null;
+        }
+        if (val == null || val.isBlank()) {
+            memberPopup.hide();
+            return;
+        }
+        String lower = val.toLowerCase();
+        List<Member> filtered = allMembers.stream()
+            .filter(m -> m.getFullName().toLowerCase().contains(lower)
+                      || m.getMemberCode().toLowerCase().contains(lower))
             .toList();
-        List<Book> allBooks = bookDAO.findAll().stream()
-            .filter(Book::isAvailable)
-            .sorted(java.util.Comparator.comparing(Book::getTitle))
+        memberListView.setItems(FXCollections.observableArrayList(filtered));
+        if (!filtered.isEmpty()) {
+            if (!memberPopup.isShowing()) {
+                var bounds = memberField.localToScreen(memberField.getBoundsInLocal());
+                if (bounds != null)
+                    memberPopup.show(memberField, bounds.getMinX(), bounds.getMaxY());
+            }
+        } else {
+            memberPopup.hide();
+        }
+    });
+
+    memberListView.setOnMouseClicked(e -> {
+        Member chosen = memberListView.getSelectionModel().getSelectedItem();
+        if (chosen != null) {
+            selectedMember[0] = chosen;
+            memberField.setText(chosen.getMemberCode() + " – " + chosen.getFullName());
+            memberField.positionCaret(memberField.getText().length());
+            memberPopup.hide();
+            formError.setVisible(false); formError.setManaged(false);
+        }
+    });
+
+    // ── Book popup ────────────────────────────────────────────────────────
+    ListView<Book> bookListView = new ListView<>();
+    bookListView.setPrefHeight(180);
+    bookListView.setPrefWidth(300);
+    bookListView.setCellFactory(lv -> new ListCell<>() {
+        @Override protected void updateItem(Book b, boolean empty) {
+            super.updateItem(b, empty);
+            setText(empty || b == null ? null : b.getIsbn() + " – " + b.getTitle());
+        }
+    });
+
+    Popup bookPopup = new Popup();
+    bookPopup.setAutoHide(true);
+    bookPopup.getContent().add(bookListView);
+    bookListView.setStyle("-fx-border-color: #ccc; -fx-background-color: white;");
+
+    bookField.textProperty().addListener((obs, old, val) -> {
+        if (selectedBook[0] != null) {
+            String display = selectedBook[0].getIsbn() + " – " + selectedBook[0].getTitle();
+            if (display.equals(val)) return;
+            selectedBook[0] = null;
+        }
+        if (val == null || val.isBlank()) {
+            bookPopup.hide();
+            return;
+        }
+        String lower = val.toLowerCase();
+        List<Book> filtered = allBooks.stream()
+            .filter(b -> b.getTitle().toLowerCase().contains(lower)
+                      || b.getIsbn().toLowerCase().contains(lower)
+                      || b.getAuthor().toLowerCase().contains(lower))
             .toList();
-
-        Dialog<int[]> dialog = new Dialog<>();
-        dialog.setTitle("Mượn sách mới");
-        dialog.setHeaderText(null);
-
-        ButtonType borrowType = new ButtonType("Xác nhận mượn", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(borrowType, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(12); grid.setVgap(12);
-        grid.setPadding(new Insets(20));
-
-        // Autocomplete member combobox
-        ObservableList<Member> memberItems = FXCollections.observableArrayList(allMembers);
-        FilteredList<Member> filteredMembers = new FilteredList<>(memberItems, m -> true);
-        ComboBox<Member> memberCombo = new ComboBox<>(filteredMembers);
-        memberCombo.setEditable(true);
-        memberCombo.setPrefWidth(300);
-        StringConverter<Member> memberConv = new StringConverter<>() {
-            public String toString(Member m) { return m == null ? "" : m.getMemberCode() + " – " + m.getFullName(); }
-            public Member fromString(String s) { return null; }
-        };
-        memberCombo.setConverter(memberConv);
-        memberCombo.getEditor().textProperty().addListener((obs, old, val) -> {
-            Member sel = memberCombo.getValue();
-            if (sel != null && memberConv.toString(sel).equals(val)) return;
-            String lower = val == null ? "" : val.toLowerCase();
-            filteredMembers.setPredicate(m -> lower.isEmpty()
-                || m.getFullName().toLowerCase().contains(lower)
-                || m.getMemberCode().toLowerCase().contains(lower));
-            if (!memberCombo.isShowing()) memberCombo.show();
-        });
-
-        // Autocomplete book combobox
-        ObservableList<Book> bookItems = FXCollections.observableArrayList(allBooks);
-        FilteredList<Book> filteredBooks = new FilteredList<>(bookItems, b -> true);
-        ComboBox<Book> bookCombo = new ComboBox<>(filteredBooks);
-        bookCombo.setEditable(true);
-        bookCombo.setPrefWidth(300);
-        StringConverter<Book> bookConv = new StringConverter<>() {
-            public String toString(Book b) { return b == null ? "" : b.getIsbn() + " – " + b.getTitle(); }
-            public Book fromString(String s) { return null; }
-        };
-        bookCombo.setConverter(bookConv);
-        bookCombo.getEditor().textProperty().addListener((obs, old, val) -> {
-            Book sel = bookCombo.getValue();
-            if (sel != null && bookConv.toString(sel).equals(val)) return;
-            String lower = val == null ? "" : val.toLowerCase();
-            filteredBooks.setPredicate(b -> lower.isEmpty()
-                || b.getTitle().toLowerCase().contains(lower)
-                || b.getIsbn().toLowerCase().contains(lower)
-                || b.getAuthor().toLowerCase().contains(lower));
-            if (!bookCombo.isShowing()) bookCombo.show();
-        });
-
-        DatePicker returnDatePicker = new DatePicker(LocalDate.now().plusDays(14));
-        returnDatePicker.setPrefWidth(160);
-
-        grid.add(new Label("Đọc giả *:"),    0, 0); grid.add(memberCombo,      1, 0);
-        grid.add(new Label("Sách *:"),          0, 1); grid.add(bookCombo,        1, 1);
-        grid.add(new Label("Ngày trả dự kiến:"), 0, 2); grid.add(returnDatePicker, 1, 2);
-
-        Label formError = new Label();
-        formError.setVisible(false); formError.setManaged(false);
-        formError.setWrapText(true); formError.setMaxWidth(340);
-        formError.setStyle("-fx-text-fill: #E11D48; -fx-font-size: 12px;");
-        grid.add(formError, 0, 3, 2, 1);
-
-        dialog.getDialogPane().setContent(grid);
-        dialog.getDialogPane().setPrefWidth(480);
-
-        Button borrowBtn = (Button) dialog.getDialogPane().lookupButton(borrowType);
-        borrowBtn.addEventFilter(javafx.event.ActionEvent.ACTION, evt -> {
-            List<String> errs = new ArrayList<>();
-            if (memberCombo.getValue() == null) errs.add("• Vui lòng chọn đọc giả.");
-            if (bookCombo.getValue() == null)   errs.add("• Vui lòng chọn sách.");
-            if (returnDatePicker.getValue() == null ||
-                !returnDatePicker.getValue().isAfter(LocalDate.now()))
-                errs.add("• Ngày trả phải sau ngày hôm nay.");
-            if (!errs.isEmpty()) {
-                formError.setText(String.join("\n", errs));
-                formError.setVisible(true); formError.setManaged(true);
-                evt.consume();
+        bookListView.setItems(FXCollections.observableArrayList(filtered));
+        if (!filtered.isEmpty()) {
+            if (!bookPopup.isShowing()) {
+                var bounds = bookField.localToScreen(bookField.getBoundsInLocal());
+                if (bounds != null)
+                    bookPopup.show(bookField, bounds.getMinX(), bounds.getMaxY());
             }
-        });
-        memberCombo.valueProperty().addListener((obs, o, n) -> { formError.setVisible(false); formError.setManaged(false); });
-        bookCombo.valueProperty().addListener((obs, o, n)   -> { formError.setVisible(false); formError.setManaged(false); });
+        } else {
+            bookPopup.hide();
+        }
+    });
 
-        dialog.setResultConverter(bt -> {
-            if (bt == borrowType && memberCombo.getValue() != null && bookCombo.getValue() != null) {
-                long loanDays = java.time.temporal.ChronoUnit.DAYS.between(
-                    LocalDate.now(), returnDatePicker.getValue());
-                return new int[]{ memberCombo.getValue().getId(),
-                                  bookCombo.getValue().getId(),
-                                  (int) Math.max(1, loanDays) };
-            }
-            return null;
-        });
+    bookListView.setOnMouseClicked(e -> {
+        Book chosen = bookListView.getSelectionModel().getSelectedItem();
+        if (chosen != null) {
+            selectedBook[0] = chosen;
+            bookField.setText(chosen.getIsbn() + " – " + chosen.getTitle());
+            bookField.positionCaret(bookField.getText().length());
+            bookPopup.hide();
+            formError.setVisible(false); formError.setManaged(false);
+        }
+    });
 
-        dialog.showAndWait().ifPresent(arr -> {
-            try {
-                BorrowRecord record = borrowService.borrowBook(arr[0], arr[1], arr[2]);
-                loadRecords();
-                showInfo("Mượn sách thành công!\nHạn trả: " + record.getDueDate());
-            } catch (Exception e) { showError(e.getMessage()); }
-        });
-    }
+    // ── Layout ────────────────────────────────────────────────────────────
+    DatePicker returnDatePicker = new DatePicker(LocalDate.now().plusDays(14));
+    returnDatePicker.setPrefWidth(160);
+
+    grid.add(new Label("Đọc giả *:"),       0, 0); grid.add(memberField,      1, 0);
+    grid.add(new Label("Sách *:"),           0, 1); grid.add(bookField,        1, 1);
+    grid.add(new Label("Ngày trả dự kiến:"), 0, 2); grid.add(returnDatePicker, 1, 2);
+    grid.add(formError,                      0, 3, 2, 1);
+
+    dialog.getDialogPane().setContent(grid);
+    dialog.getDialogPane().setPrefWidth(480);
+
+    Button borrowBtn = (Button) dialog.getDialogPane().lookupButton(borrowType);
+    borrowBtn.addEventFilter(javafx.event.ActionEvent.ACTION, evt -> {
+        List<String> errs = new ArrayList<>();
+        if (selectedMember[0] == null) errs.add("• Vui lòng chọn đọc giả.");
+        if (selectedBook[0] == null)   errs.add("• Vui lòng chọn sách.");
+        if (returnDatePicker.getValue() == null ||
+            !returnDatePicker.getValue().isAfter(LocalDate.now()))
+            errs.add("• Ngày trả phải sau ngày hôm nay.");
+        if (!errs.isEmpty()) {
+            formError.setText(String.join("\n", errs));
+            formError.setVisible(true); formError.setManaged(true);
+            evt.consume();
+        }
+    });
+
+    dialog.setResultConverter(bt -> {
+        if (bt == borrowType && selectedMember[0] != null && selectedBook[0] != null) {
+            long loanDays = java.time.temporal.ChronoUnit.DAYS.between(
+                LocalDate.now(), returnDatePicker.getValue());
+            return new int[]{ selectedMember[0].getId(),
+                              selectedBook[0].getId(),
+                              (int) Math.max(1, loanDays) };
+        }
+        return null;
+    });
+
+    dialog.showAndWait().ifPresent(arr -> {
+        try {
+            BorrowRecord record = borrowService.borrowBook(arr[0], arr[1], arr[2]);
+            loadRecords();
+            showInfo("Mượn sách thành công!\nHạn trả: " + record.getDueDate());
+        } catch (Exception e) { showError(e.getMessage()); }
+    });
+}
 
     // ── Return / Lost ──────────────────────────────────────────────────────
 

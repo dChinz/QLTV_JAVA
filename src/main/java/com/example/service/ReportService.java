@@ -19,12 +19,15 @@ public class ReportService {
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new LinkedHashMap<>();
         try {
-            stats.put("totalBooks",       queryLong("SELECT COUNT(*) FROM books WHERE deleted = FALSE"));
-            stats.put("totalMembers",     queryLong("SELECT COUNT(*) FROM members WHERE status='ACTIVE' AND deleted = FALSE"));
+            stats.put("totalBooks",       queryLong("SELECT COUNT(*) FROM books WHERE deleted = 0"));
+            stats.put("totalMembers",     queryLong("SELECT COUNT(*) FROM members WHERE status='ACTIVE' AND deleted = 0"));
             stats.put("activeBorrows",    queryLong("SELECT COUNT(*) FROM borrow_records WHERE status IN ('BORROWING','OVERDUE')"));
-            stats.put("overdueCount",     queryLong("SELECT COUNT(*) FROM borrow_records WHERE status='OVERDUE' OR (status='BORROWING' AND due_date < CURDATE())"));
-            stats.put("unpaidFines",      queryDecimal("SELECT COALESCE(SUM(amount),0) FROM fines WHERE paid=FALSE"));
-            stats.put("borrowsThisMonth", queryLong("SELECT COUNT(*) FROM borrow_records WHERE MONTH(borrow_date)=MONTH(CURDATE()) AND YEAR(borrow_date)=YEAR(CURDATE())"));
+            // CURDATE() -> TRUNC(SYSDATE)
+            stats.put("overdueCount",     queryLong("SELECT COUNT(*) FROM borrow_records WHERE status='OVERDUE' OR (status='BORROWING' AND due_date < TRUNC(SYSDATE))"));
+            // FALSE -> 0, COALESCE -> NVL
+            stats.put("unpaidFines",      queryDecimal("SELECT NVL(SUM(amount),0) FROM fines WHERE paid=0"));
+            // CURDATE() -> SYSDATE
+            stats.put("borrowsThisMonth", queryLong("SELECT COUNT(*) FROM borrow_records WHERE EXTRACT(MONTH FROM borrow_date)=EXTRACT(MONTH FROM SYSDATE) AND EXTRACT(YEAR FROM borrow_date)=EXTRACT(YEAR FROM SYSDATE)"));
         } catch (Exception e) {
             throw new RuntimeException("Error loading dashboard stats", e);
         }
@@ -34,20 +37,21 @@ public class ReportService {
     /** Top 10 most borrowed books */
     public List<Map<String, Object>> getTopBorrowedBooks(int limit) {
         List<Map<String, Object>> result = new ArrayList<>();
+        // LIMIT ? -> FETCH FIRST ? ROWS ONLY (Oracle 12c+)
         String sql = """
             SELECT b.title, b.author, COUNT(*) AS borrow_count
             FROM borrow_records br JOIN books b ON br.book_id = b.id
             GROUP BY b.id, b.title, b.author
             ORDER BY borrow_count DESC
-            LIMIT ?
+            FETCH FIRST ? ROWS ONLY
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, limit);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("title", rs.getString("title"));
-                row.put("author", rs.getString("author"));
+                row.put("title",       rs.getString("title"));
+                row.put("author",      rs.getString("author"));
                 row.put("borrowCount", rs.getLong("borrow_count"));
                 result.add(row);
             }
@@ -60,20 +64,21 @@ public class ReportService {
     /** Most active members (by borrow count) */
     public List<Map<String, Object>> getTopActiveMembers(int limit) {
         List<Map<String, Object>> result = new ArrayList<>();
+        // LIMIT ? -> FETCH FIRST ? ROWS ONLY
         String sql = """
             SELECT m.member_code, m.full_name, COUNT(*) AS borrow_count
             FROM borrow_records br JOIN members m ON br.member_id = m.id
             GROUP BY m.id, m.member_code, m.full_name
             ORDER BY borrow_count DESC
-            LIMIT ?
+            FETCH FIRST ? ROWS ONLY
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
             ps.setInt(1, limit);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("memberCode", rs.getString("member_code"));
-                row.put("fullName",   rs.getString("full_name"));
+                row.put("memberCode",  rs.getString("member_code"));
+                row.put("fullName",    rs.getString("full_name"));
                 row.put("borrowCount", rs.getLong("borrow_count"));
                 result.add(row);
             }
@@ -87,10 +92,10 @@ public class ReportService {
     public List<Map<String, Object>> getMonthlyBorrowStats(int year) {
         List<Map<String, Object>> result = new ArrayList<>();
         String sql = """
-            SELECT MONTH(borrow_date) AS month, COUNT(*) AS total
+            SELECT EXTRACT(MONTH FROM borrow_date) AS month, COUNT(*) AS total
             FROM borrow_records
-            WHERE YEAR(borrow_date) = ?
-            GROUP BY MONTH(borrow_date)
+            WHERE EXTRACT(YEAR FROM borrow_date) = ?
+            GROUP BY EXTRACT(MONTH FROM borrow_date)
             ORDER BY month
             """;
         try (PreparedStatement ps = getConn().prepareStatement(sql)) {
@@ -113,7 +118,7 @@ public class ReportService {
         List<Map<String, Object>> result = new ArrayList<>();
         String sql = """
             SELECT c.name AS category, COUNT(b.id) AS book_count
-            FROM categories c LEFT JOIN books b ON b.category_id = c.id AND b.deleted = FALSE
+            FROM categories c LEFT JOIN books b ON b.category_id = c.id AND b.deleted = 0
             GROUP BY c.id, c.name
             ORDER BY book_count DESC
             """;

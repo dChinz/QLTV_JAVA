@@ -4,26 +4,23 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-/**
- * Singleton database connection manager.
- * Edit DB_URL, DB_USER, DB_PASSWORD to match your MySQL setup.
- */
 public class DatabaseConfig {
 
-    private static final String DB_URL      = "jdbc:mysql://localhost:3306/library_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8";
-    private static final String DB_USER     = "root";
-    private static final String DB_PASSWORD = "phong1999";
+    // Sửa lại thông tin kết nối Oracle
+    private static final String DB_URL = "jdbc:oracle:thin:@localhost:1521/orcl";
+    private static final String DB_USER     = "chinh";
+    private static final String DB_PASSWORD = "123";
 
     private static DatabaseConfig instance;
     private Connection connection;
 
     private DatabaseConfig() {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName("oracle.jdbc.driver.OracleDriver");
             connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            System.out.println("[DB] Connected to MySQL successfully.");
+            System.out.println("[DB] Connected to Oracle successfully.");
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("MySQL JDBC Driver not found.", e);
+            throw new RuntimeException("Oracle JDBC Driver not found.", e);
         } catch (SQLException e) {
             throw new RuntimeException("Cannot connect to database: " + e.getMessage(), e);
         }
@@ -36,7 +33,6 @@ public class DatabaseConfig {
         return instance;
     }
 
-    @SuppressWarnings("exports")
     public Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
