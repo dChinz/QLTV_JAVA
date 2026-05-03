@@ -5,12 +5,12 @@
 -- USERS
 INSERT INTO users (username, password_hash, full_name, email, role, active)
 VALUES ('admin',
-        '$2a$12$l5DI8WdKWEnW4C2m2Sv9auf5bzdppSW8J9C0joRTZ198Benq0e8LW',
+        '$2a$10$KyZAzD8a7atDXAuZXHNNbeWLRmk7/wJp.AYM9QdNzS4A9UCH71np6',
         'Quản trị hệ thống', 'admin@library.local', 'ADMIN', 1);
 
 INSERT INTO users (username, password_hash, full_name, email, role, active)
 VALUES ('thuthu01',
-        '$2a$12$l5DI8WdKWEnW4C2m2Sv9auf5bzdppSW8J9C0joRTZ198Benq0e8LW',
+        '$2a$10$KyZAzD8a7atDXAuZXHNNbeWLRmk7/wJp.AYM9QdNzS4A9UCH71np6',
         'Nguyễn Thị Thu', 'thuthu01@library.local', 'LIBRARIAN', 1);
 
 -- CATEGORIES
